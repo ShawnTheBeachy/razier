@@ -7,9 +7,10 @@ namespace Razier.Parser;
 // Public methods.
 public sealed partial class Parser
 {
-    public Parser(IToken[] tokens)
+    public Parser(IToken[] tokens, bool validate = false)
     {
         _tokens = tokens;
+        _validate = validate;
     }
 
     public IEnumerable<IParsedToken> Parse()
@@ -26,7 +27,7 @@ public sealed partial class Parser
             Advance();
         }
 
-        if (_nestLevel > 0)
+        if (_validate && _nestLevel > 0)
             throw new Exception("A tag is not closed!");
     }
 }
@@ -118,33 +119,6 @@ public sealed partial class Parser
         return new() { Value = value.ToString() };
     }
 
-    private BeginTagToken ConsumeBeginTagToken()
-    {
-        var value = new StringBuilder();
-        value.AddToken(Token());
-
-        AdvanceUntil<WordToken>();
-        value.AddToken(Token());
-        _tagName = Token().Value.ToString();
-
-        if (NextTokenIs<EndTagToken>(true))
-        {
-            _isInTag = false;
-
-            if (IsVoidElement(Token()))
-                _tagName = null;
-            else
-                _nestLevel++;
-
-            AdvanceUntil<EndTagToken>();
-            value.AddToken(Token());
-        }
-        else
-            _isInTag = true;
-
-        return new() { Value = value.ToString() };
-    }
-
     private CodeBlockToken ConsumeBeginCodeBlockToken()
     {
         var open = Token().Value.ToString();
@@ -158,6 +132,32 @@ public sealed partial class Parser
             Open = open,
             Value = code
         };
+    }
+
+    private BeginTagToken ConsumeBeginTagToken()
+    {
+        var value = new StringBuilder();
+        value.AddToken(Token());
+
+        AdvanceUntil<WordToken>();
+        value.AddToken(Token());
+        _tagName = Token().Value.ToString();
+
+        if (NextTokenIs<EndTagToken>(true))
+        {
+            _isInTag = false;
+
+            if (!IsVoidElement(Token()))
+            {
+                _nestLevel++;
+                AdvanceUntil<EndTagToken>();
+                value.AddToken(Token());
+            }
+        }
+        else
+            _isInTag = true;
+
+        return new() { Value = value.ToString() };
     }
 
     private CommentToken ConsumeCommentToken()
@@ -334,6 +334,7 @@ public sealed partial class Parser
     private int _nestLevel;
     private string? _tagName;
     private readonly IToken[] _tokens;
+    private readonly bool _validate;
     private readonly HashSet<string> _voidTypes =
         new()
         {
