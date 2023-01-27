@@ -34,6 +34,24 @@ public sealed partial class Formatter
 {
     private void Advance() => _index++;
 
+    private void ConsumeCode(int indentLevel)
+    {
+        var ct = (CodeBlockToken)(Token());
+        var code = CSharpier.CodeFormatter.Format(
+            Token().Value,
+            new CSharpier.CodeFormatterOptions { Width = MAX_LINE_LENGTH }
+        );
+
+        if (code.IndexOf('\n') < 0)
+            OutputLine(new ContentToken { Value = $"{ct.Open} {code} {ct.Close}" }, ++indentLevel);
+        else
+        {
+            OutputLine(new ContentToken { Value = ct.Open }, ++indentLevel);
+            OutputLine(new ContentToken { Value = code }, ++indentLevel);
+            OutputLine(new ContentToken { Value = ct.Close }, --indentLevel);
+        }
+    }
+
     private void ConsumeContent(int indentLevel, bool forceNewLine)
     {
         if (
@@ -125,6 +143,7 @@ public sealed partial class Formatter
         Action consume = Token() switch
         {
             BeginTagToken => () => ConsumeElement(indentLevel),
+            CodeBlockToken => () => ConsumeCode(indentLevel),
             _ => () => ConsumeContent(indentLevel, forceNewLine)
         };
         consume();
