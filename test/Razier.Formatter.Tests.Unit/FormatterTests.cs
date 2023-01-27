@@ -5,6 +5,23 @@ namespace Razier.Formatter;
 public sealed class FormatterTests
 {
     [Theory]
+    [InlineData(
+        "<div><div>@{while(true)var x = 1;}</div></div>",
+        "<div>\r\n    <div>\r\n        @{\r\n            while (true)\r\n                var x = 1;\r\n        }\r\n    </div>\r\n</div>"
+    )]
+    public void Format_ShouldIndentCode_WhenIndentLevelIsMoreThanZero(string input, string expected)
+    {
+        // Arrange.
+        var formatter = new Formatter(input);
+
+        // Act.
+        var formatted = formatter.Format();
+
+        // Assert.
+        formatted.Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData("<div disabled></div>", "<div disabled></div>")]
     [InlineData(
         "<div disabled class='container'></div>",
@@ -39,7 +56,7 @@ public sealed class FormatterTests
     )
     {
         // Arrange.
-        var formatter = new Formatter(input, "\t");
+        var formatter = new Formatter(input);
 
         // Act.
         var formatted = formatter.Format();
@@ -163,7 +180,7 @@ public sealed class FormatterTests
     )
     {
         // Arrange.
-        var formatter = new Formatter(input, "\t");
+        var formatter = new Formatter(input);
 
         // Act.
         var formatted = formatter.Format();

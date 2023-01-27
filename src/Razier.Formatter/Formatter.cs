@@ -6,7 +6,7 @@ namespace Razier.Formatter;
 // Public methods.
 public sealed partial class Formatter
 {
-    public Formatter(string input, string indentation = "  ")
+    public Formatter(string input, string indentation = "    ")
     {
         _indentation = indentation;
         var lexer = new Lexer.Lexer(input);
@@ -39,7 +39,10 @@ public sealed partial class Formatter
         var ct = (CodeBlockToken)(Token());
         var code = CSharpier.CodeFormatter.Format(
             Token().Value,
-            new CSharpier.CodeFormatterOptions { Width = MAX_LINE_LENGTH }
+            new CSharpier.CodeFormatterOptions
+            {
+                Width = MAX_LINE_LENGTH - (indentLevel * _indentation.Length)
+            }
         );
 
         if (code.IndexOf('\n') < 0)
@@ -66,17 +69,7 @@ public sealed partial class Formatter
         else
         {
             indentLevel++;
-            var nlLines = Token().Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var nlLine in nlLines)
-            {
-                var crLines = nlLine.Split('\r', StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var crLine in crLines)
-                {
-                    OutputLine(new ContentToken { Value = crLine }, indentLevel);
-                }
-            }
+            OutputLine(Token(), indentLevel);
         }
     }
 
@@ -160,12 +153,15 @@ public sealed partial class Formatter
     private int LineLength(IParsedToken token, int indentLevel) =>
         token.Value.Length + (indentLevel * _indentation.Length);
 
-    private bool NextTokenIs<T>() where T : IParsedToken => NextTokenIs<T>(_index);
+    private bool NextTokenIs<T>()
+        where T : IParsedToken => NextTokenIs<T>(_index);
 
-    private bool NextTokenIs<T>(int index) where T : IParsedToken =>
+    private bool NextTokenIs<T>(int index)
+        where T : IParsedToken =>
         HasNotReachedEnd() && index < _tokens.Length - 1 && _tokens[index + 1] is T;
 
-    private bool NextTokenIsNot<T>() where T : IParsedToken => !NextTokenIs<T>();
+    private bool NextTokenIsNot<T>()
+        where T : IParsedToken => !NextTokenIs<T>();
 
     private void Output(IParsedToken token, bool withSpace = false) =>
         _output.Append($"{(withSpace ? " " : "")}{token.Value}");
@@ -174,40 +170,51 @@ public sealed partial class Formatter
 
     private void OutputLine(IParsedToken token, int indentLevel)
     {
-        if (_output.Length > 0)
-            _output.AppendLine();
+        var lines = token.Value.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-        for (var i = 0; i < indentLevel; i++)
-            _output.Append(_indentation);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (_output.Length > 0)
+                _output.AppendLine();
 
-        _output.Append(token.Value);
+            for (var j = 0; j < indentLevel; j++)
+                _output.Append(_indentation);
+
+            _output.Append(lines[i]);
+        }
     }
 
     private IParsedToken PreviousToken() => PreviousToken(_index);
 
     private IParsedToken PreviousToken(int index) => _tokens[index - 1];
 
-    private bool PreviousTokenIs<T>() where T : IParsedToken => PreviousTokenIs<T>(_index);
+    private bool PreviousTokenIs<T>()
+        where T : IParsedToken => PreviousTokenIs<T>(_index);
 
-    private bool PreviousTokenIsNot<T>() where T : IParsedToken => !PreviousTokenIs<T>(_index);
+    private bool PreviousTokenIsNot<T>()
+        where T : IParsedToken => !PreviousTokenIs<T>(_index);
 
-    private bool PreviousTokenIs<T>(int index) where T : IParsedToken =>
-        index > 0 && _tokens[index - 1] is T;
+    private bool PreviousTokenIs<T>(int index)
+        where T : IParsedToken => index > 0 && _tokens[index - 1] is T;
 
-    private bool PreviousTokenIsNot<T>(int index) where T : IParsedToken =>
-        !PreviousTokenIs<T>(index);
+    private bool PreviousTokenIsNot<T>(int index)
+        where T : IParsedToken => !PreviousTokenIs<T>(index);
 
     private IParsedToken Token() => Token(_index);
 
     private IParsedToken Token(int index) => _tokens[index];
 
-    private bool TokenIs<T>() where T : IParsedToken => TokenIs<T>(_index);
+    private bool TokenIs<T>()
+        where T : IParsedToken => TokenIs<T>(_index);
 
-    private bool TokenIsNot<T>() where T : IParsedToken => TokenIsNot<T>(_index);
+    private bool TokenIsNot<T>()
+        where T : IParsedToken => TokenIsNot<T>(_index);
 
-    private bool TokenIs<T>(int index) where T : IParsedToken => _tokens[index] is T;
+    private bool TokenIs<T>(int index)
+        where T : IParsedToken => _tokens[index] is T;
 
-    private bool TokenIsNot<T>(int index) where T : IParsedToken => !TokenIs<T>(index);
+    private bool TokenIsNot<T>(int index)
+        where T : IParsedToken => !TokenIs<T>(index);
 }
 
 // Private fields.
