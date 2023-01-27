@@ -6,12 +6,48 @@ public sealed class FormatterTests
 {
     [Theory]
     [InlineData(
+        "@code {\r\n    private void A()\r\n    {\r\n}}",
+        "@code\r\n{\r\n    private void A() { }\r\n}"
+    )]
+    public void Format_ShouldIgnoreOriginalCodeIndentation_WhenCodeIsIndented(
+        string input,
+        string expected
+    )
+    {
+        // Arrange.
+        var formatter = new Formatter(input);
+
+        // Act.
+        var formatted = formatter.Format();
+
+        // Assert.
+        formatted.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(
         "<div><div>@{while(true)var x = 1;}</div></div>",
         "<div>\r\n    <div>\r\n        @{\r\n            while (true)\r\n                var x = 1;\r\n        }\r\n    </div>\r\n</div>"
     )]
     public void Format_ShouldIndentCode_WhenIndentLevelIsMoreThanZero(string input, string expected)
     {
         // Arrange.
+        var formatter = new Formatter(input);
+
+        // Act.
+        var formatted = formatter.Format();
+
+        // Assert.
+        formatted.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Format_ShouldInsertEmptyLineBeforeCodeBlock_WhenIndentLevelIsZeroAndIsNotFirstLine()
+    {
+        // Arrange.
+        var input = "<div></div>@code { while(true){var x = 1;} }";
+        var expected =
+            "<div></div>\r\n\r\n@code\r\n{\r\n    while (true)\r\n    {\r\n        var x = 1;\r\n    }\r\n}";
         var formatter = new Formatter(input);
 
         // Act.
@@ -69,6 +105,10 @@ public sealed class FormatterTests
     [InlineData("<div>Hello</div>", "<div>Hello</div>")]
     [InlineData("<div active>Hello</div>", "<div active>Hello</div>")]
     [InlineData(
+        "<div class='                                                         '>Some content!</div>",
+        "<div class='                                                         '>\r\n\tSome content!\r\n</div>"
+    )]
+    [InlineData(
         "<div active>1238456789012345678901234567890123456789012345678901234567890123456789012345678901</div>",
         "<div active>\r\n\t1238456789012345678901234567890123456789012345678901234567890123456789012345678901\r\n</div>"
     )]
@@ -97,6 +137,39 @@ public sealed class FormatterTests
     {
         // Arrange.
         var formatter = new Formatter(input, "\t");
+
+        // Act.
+        var formatted = formatter.Format();
+
+        // Assert.
+        formatted.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Format_ShouldNotInsertEmptyLineBeforeCodeBlock_WhenIndentLevelIsZeroAndIsFirstLine()
+    {
+        // Arrange.
+        var input = "@code { while(true){var x = 1;} }";
+        var expected =
+            "@code\r\n{\r\n    while (true)\r\n    {\r\n        var x = 1;\r\n    }\r\n}";
+        var formatter = new Formatter(input);
+
+        // Act.
+        var formatted = formatter.Format();
+
+        // Assert.
+        formatted.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(
+        "@{ void A() {}\r\n\r\nvoid B() {} }",
+        "@{\r\n    void A() { }\r\n    \r\n    void B() { }\r\n}"
+    )]
+    public void Format_ShouldNotStripNewLines_FromCodeBlock(string input, string expected)
+    {
+        // Arrange.
+        var formatter = new Formatter(input);
 
         // Act.
         var formatted = formatter.Format();

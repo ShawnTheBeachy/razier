@@ -85,11 +85,17 @@ public sealed class LexerTests
         tokens.First().Value.ToString().Should().Be(input);
     }
 
-    [Fact]
-    public void Lex_ShouldReturnBeginCommentToken_WhenExclamationDashDashFollowsOpenBracket()
+    [Theory]
+    [InlineData("<!--", "<!--")]
+    [InlineData("<!---->", "<!--")]
+    [InlineData("@*", "@*")]
+    [InlineData("@**@", "@*")]
+    public void Lex_ShouldReturnBeginCommentToken_WhenHtmlOrRazorComment(
+        string input,
+        string expected
+    )
     {
         // Arrange.
-        var input = "<!--";
         var lexer = new Lexer(input);
 
         // Act.
@@ -97,7 +103,25 @@ public sealed class LexerTests
 
         // Assert.
         tokens.First().Should().BeOfType<BeginCommentToken>();
-        tokens.First().Value.ToString().Should().Be("<!--");
+        tokens.First().Value.ToString().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("@inherits Base<ViewModel>")]
+    [InlineData("   @inherits Base<ViewModel>")]
+    public void Lex_ShouldReturnBeginInlineCodeBlockToken_WhenAtSymbolIsFirstCharacterOnLine(
+        string input
+    )
+    {
+        // Arrange.
+        var lexer = new Lexer(input);
+
+        // Act.
+        var tokens = lexer.Lex().Where(x => x is BeginInlineCodeBlockToken);
+
+        // Assert.
+        tokens.Should().HaveCount(1);
+        tokens.First().Should().BeOfType<BeginInlineCodeBlockToken>();
     }
 
     [Fact]
@@ -167,9 +191,14 @@ public sealed class LexerTests
     }
 
     [Theory]
-    [InlineData("-->")]
-    [InlineData("comment-->")]
-    public void Lex_ShouldReturnEndCommentToken_WhenDashCloseBracketFollowsDash(string input)
+    [InlineData("-->", "-->")]
+    [InlineData("<!---->", "-->")]
+    [InlineData("*@", "*@")]
+    [InlineData("@**@", "*@")]
+    public void Lex_ShouldReturnEndCommentToken_WhenHtmlOrRazorComment(
+        string input,
+        string expected
+    )
     {
         // Arrange.
         var lexer = new Lexer(input);
@@ -179,7 +208,7 @@ public sealed class LexerTests
 
         // Assert.
         tokens.Should().HaveCount(1);
-        tokens.First().Value.ToString().Should().Be("-->");
+        tokens.First().Value.ToString().Should().Be(expected);
     }
 
     [Theory]

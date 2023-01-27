@@ -39,7 +39,8 @@ public sealed partial class Parser
 
     private void Advance(int count) => _index += count;
 
-    private void AdvanceUntil<T>() where T : IToken
+    private void AdvanceUntil<T>()
+        where T : IToken
     {
         do
         {
@@ -47,7 +48,8 @@ public sealed partial class Parser
         } while (Token() is not T);
     }
 
-    private void AdvanceWhile<T>() where T : IToken
+    private void AdvanceWhile<T>()
+        where T : IToken
     {
         while (Token() is T)
         {
@@ -174,7 +176,7 @@ public sealed partial class Parser
             value.AddToken(Token());
         }
 
-        return new() { Value = value.ToString() };
+        return new() { Value = value.ToString().Trim(new[] { '\r', '\n', '\t', ' ' }) };
     }
 
     private IParsedToken ConsumeEndTagToken()
@@ -195,19 +197,24 @@ public sealed partial class Parser
         }
     }
 
+    private IParsedToken ConsumeInlineCodeBlock() =>
+        new InlineCodeBlockToken { Value = Token().Value.ToString() };
+
     private IParsedToken ConsumeToken() =>
         Token() switch
         {
             BeginCommentToken => ConsumeCommentToken(),
             BeginCloseTagToken => ConsumeBeginCloseTagToken(),
             BeginCodeBlockToken => ConsumeBeginCodeBlockToken(),
+            BeginInlineCodeBlockToken => ConsumeInlineCodeBlock(),
             BeginOpenTagToken => ConsumeBeginTagToken(),
             EndTagToken => ConsumeEndTagToken(),
             WordToken => _isInTag ? ConsumeAttributeToken() : ConsumeContentToken(),
             _ => new IgnoreToken()
         };
 
-    private T ConsumeToken<T>() where T : IParsedToken, new()
+    private T ConsumeToken<T>()
+        where T : IParsedToken, new()
     {
         Advance();
         var token = new T { Value = Token().Value.ToString() };
@@ -229,7 +236,8 @@ public sealed partial class Parser
 
     private bool IsVoidElement(string type) => _voidTypes.Contains(type);
 
-    private T Last<T>() where T : IToken
+    private T Last<T>()
+        where T : IToken
     {
         var i = _index;
 

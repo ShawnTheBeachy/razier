@@ -35,12 +35,14 @@ public sealed partial class Lexer
 
     private void Advance(int count) => _index += count;
 
-    private void AdvanceUntil(char c)
+    private void AdvanceUntil(char c) => AdvanceUntil(new[] { c });
+
+    private void AdvanceUntil(params char[] cs)
     {
         do
         {
             _index++;
-        } while (CharIsNot(c));
+        } while (HasNotReachedEnd() && !cs.Contains(_input.Span[_index]));
     }
 
     private char Char() => Char(_index);
@@ -89,7 +91,7 @@ public sealed partial class Lexer
         return ReadToken<CodeBlockContentToken>();
     }
 
-    private IEnumerable<IToken> ConsumeCodeBlockTokenOrWordToken()
+    private IEnumerable<IToken> ConsumeCodeBlockTokenOrCommentTokenOrWordToken()
     {
         if (NextCharIs('{'))
         {
@@ -105,16 +107,29 @@ public sealed partial class Lexer
             yield return ConsumeCodeBlockContentToken();
             yield return ConsumeFixedLengthToken<EndCodeBlockToken>(1);
         }
+        else if (NextCharIs('*'))
+            yield return ConsumeFixedLengthToken<BeginCommentToken>(2);
+        else if (_index == 0 || PreviousCharIsOrStart(new[] { '\r', '\n' }, ' ', '\t'))
+        {
+            AdvanceUntil('\n', '\r');
+            yield return ReadToken<BeginInlineCodeBlockToken>();
+        }
         else
             yield return ConsumeWordToken();
     }
 
-    private IToken ConsumeEndCommentTokenOrWordToken() =>
-        NextStringIs(Constants.CloseComment)
-            ? ConsumeFixedLengthToken<EndCommentToken>(Constants.CloseComment.Length)
-            : ConsumeWordToken();
+    private IToken ConsumeEndCommentTokenOrWordToken()
+    {
+        if (NextCharIs('@'))
+            return ConsumeFixedLengthToken<EndCommentToken>(2);
+        else if (NextStringIs(Constants.CloseComment))
+            return ConsumeFixedLengthToken<EndCommentToken>(Constants.CloseComment.Length);
+        else
+            return ConsumeWordToken();
+    }
 
-    private T ConsumeFixedLengthToken<T>(int length) where T : IToken, new()
+    private T ConsumeFixedLengthToken<T>(int length)
+        where T : IToken, new()
     {
         Advance(length);
         return ReadToken<T>();
@@ -137,7 +152,7 @@ public sealed partial class Lexer
     {
         if (CharIs('@'))
         {
-            var tokens = ConsumeCodeBlockTokenOrWordToken();
+            var tokens = ConsumeCodeBlockTokenOrCommentTokenOrWordToken();
 
             foreach (var token in tokens)
                 yield return token;
@@ -151,7 +166,7 @@ public sealed partial class Lexer
                 or Constants.SingleQuoteString
                     => ConsumeStringDelimiterTokenOrWordToken(),
                 ' ' => ConsumeFixedLengthToken<WhiteSpaceToken>(1),
-                '-' => ConsumeEndCommentTokenOrWordToken(),
+                '-' or '*' => ConsumeEndCommentTokenOrWordToken(),
                 '=' => ConsumeFixedLengthToken<EqualsToken>(1),
                 '\n' => ConsumeFixedLengthToken<NewLineToken>(1),
                 '\r' => ConsumeFixedLengthToken<CarriageReturnToken>(1),
@@ -245,7 +260,25 @@ public sealed partial class Lexer
 
     private bool NextStringIsNot(int index, string s) => !NextStringIs(index, s);
 
+    private char? PreviousChar(params char[] ignore)
+    {
+        var i = _index;
+
+        do
+        {
+            i--;
+        } while (i > 0 && ignore.Contains(_input.Span[i]));
+
+        return ignore.Contains(_input.Span[i]) ? null : _input.Span[i];
+    }
+
     private bool PreviousCharIs(char c) => PreviousCharIs(_index, c);
+
+    private bool PreviousCharIsOrStart(char[] match, params char[] ignore)
+    {
+        var previousChar = PreviousChar(ignore);
+        return !previousChar.HasValue || match.Contains(previousChar.Value);
+    }
 
     private bool PreviousCharIs(int index, char c) => index > 0 && _input.Span[index - 1] == c;
 
@@ -253,7 +286,8 @@ public sealed partial class Lexer
 
     private bool PreviousCharIsNot(int index, char c) => !PreviousCharIs(index, c);
 
-    private T ReadToken<T>() where T : IToken, new()
+    private T ReadToken<T>()
+        where T : IToken, new()
     {
         var token = new T { Value = SliceToken() };
         StartToken();

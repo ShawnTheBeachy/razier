@@ -37,19 +37,32 @@ public sealed partial class Formatter
     private void ConsumeCode(int indentLevel)
     {
         var ct = (CodeBlockToken)(Token());
-        var code = CSharpier.CodeFormatter.Format(
-            Token().Value,
+        // CSharpier needs a namespace to trick it into formatting "invalid" code.
+        var ns = "namespace A;";
+        var code = $"{ns}{Token().Value}";
+        code = CSharpier.CodeFormatter.Format(
+            code,
             new CSharpier.CodeFormatterOptions
             {
                 Width = MAX_LINE_LENGTH - (indentLevel * _indentation.Length)
             }
-        );
+        )[ns.Length..];
+
+        if (indentLevel == -1 && _output.Length > 0)
+            OutputLine();
 
         if (code.IndexOf('\n') < 0)
             OutputLine(new ContentToken { Value = $"{ct.Open} {code} {ct.Close}" }, ++indentLevel);
         else
         {
-            OutputLine(new ContentToken { Value = ct.Open }, ++indentLevel);
+            if (ct.Open.StartsWith("@code"))
+            {
+                OutputLine(new ContentToken { Value = "@code" }, ++indentLevel);
+                OutputLine(new ContentToken { Value = "{" }, indentLevel);
+            }
+            else
+                OutputLine(new ContentToken { Value = ct.Open }, ++indentLevel);
+
             OutputLine(new ContentToken { Value = code }, ++indentLevel);
             OutputLine(new ContentToken { Value = ct.Close }, --indentLevel);
         }
@@ -76,6 +89,7 @@ public sealed partial class Formatter
     private void ConsumeElement(int indentLevel)
     {
         OutputLine(Token(), ++indentLevel);
+        var lineLength = LineLength(Token(), indentLevel);
         var hasMultipleAttributes =
             NextTokenIs<AttributeToken>() && NextTokenIs<AttributeToken>(_index + 1);
 
@@ -86,7 +100,10 @@ public sealed partial class Formatter
             if (hasMultipleAttributes)
                 OutputLine(Token(), indentLevel + 1);
             else
+            {
                 Output(Token(), true);
+                lineLength += Token().Value.Length + 1;
+            }
         }
 
         Advance();
@@ -103,7 +120,10 @@ public sealed partial class Formatter
             return;
         }
         else if (TokenIs<SoftCloseTagToken>())
+        {
             Output(Token());
+            lineLength++;
+        }
 
         Advance();
         var children = 0;
@@ -111,12 +131,14 @@ public sealed partial class Formatter
         while (TokenIsNot<HardCloseTagToken>())
         {
             children++;
-            ConsumeToken(indentLevel, hasMultipleAttributes);
+            lineLength += Token().Value.Length;
+            ConsumeToken(indentLevel, hasMultipleAttributes || lineLength > MAX_LINE_LENGTH);
             Advance();
         }
 
         if (
             !hasMultipleAttributes
+            && lineLength <= MAX_LINE_LENGTH
             && (
                 children == 0
                 || (
@@ -131,10 +153,13 @@ public sealed partial class Formatter
             OutputLine(Token(), indentLevel);
     }
 
+    private void ConsumeInlineCodeBlock(int indentLevel) => OutputLine(Token(), ++indentLevel);
+
     private void ConsumeToken(int indentLevel, bool forceNewLine)
     {
         Action consume = Token() switch
         {
+            InlineCodeBlockToken => () => ConsumeInlineCodeBlock(indentLevel),
             BeginTagToken => () => ConsumeElement(indentLevel),
             CodeBlockToken => () => ConsumeCode(indentLevel),
             _ => () => ConsumeContent(indentLevel, forceNewLine)
@@ -166,11 +191,15 @@ public sealed partial class Formatter
     private void Output(IParsedToken token, bool withSpace = false) =>
         _output.Append($"{(withSpace ? " " : "")}{token.Value}");
 
+    private void OutputLine() => _output.AppendLine();
+
     private void OutputLine(IParsedToken token) => OutputLine(token, _indentationLevel);
 
     private void OutputLine(IParsedToken token, int indentLevel)
     {
-        var lines = token.Value.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = token.Value
+            .Trim('\r', '\n')
+            .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         for (var i = 0; i < lines.Length; i++)
         {

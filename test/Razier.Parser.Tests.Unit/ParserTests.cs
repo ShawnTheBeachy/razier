@@ -264,6 +264,25 @@ public sealed partial class ParserTests
     }
 
     [Theory]
+    [InlineData("@using Humanizer;")]
+    [InlineData("@foreach (var i in items)")]
+    public void Parse_ShouldReturnInlineCodeBlockToken_WhenBeginInlineCodeBlockEncountered(
+        string input
+    )
+    {
+        // Arrange.
+        var tokens = new Lexer.Lexer(input).Lex();
+        var parser = new Parser(tokens.ToArray());
+
+        // Act.
+        var parsed = parser.Parse().Where(x => x is InlineCodeBlockToken);
+
+        // Assert.
+        parsed.Should().HaveCount(1);
+        parsed.First().Value.Should().Be(input);
+    }
+
+    [Theory]
     [InlineData("<div active>", false)]
     [InlineData("<div>", false)]
     [InlineData("<div class='container'>", false)]
@@ -306,6 +325,21 @@ public sealed partial class ParserTests
         }
     }
 
+    [Fact]
+    public void Parse_ShouldTrimNewLinesTabsAndSpaces_FromContent()
+    {
+        // Arrange.
+        var input = "<div>\r\nContent\r\n\t     </div>";
+        var lexer = new Lexer.Lexer(input);
+        var parser = new Parser(lexer.Lex().ToArray(), false);
+
+        // Act.
+        var parsed = parser.Parse().Where(x => x is ContentToken);
+
+        // Assert.
+        parsed.First().Value.Should().NotEndWith("\r\n\t     ");
+    }
+
     [Theory]
     [InlineData("<div></div>")]
     [InlineData("<div><div></div></div>")]
@@ -328,6 +362,6 @@ public sealed partial class ParserTests
 // Private methods.
 public sealed partial class ParserTests
 {
-    private static T LexToken<T>(string value) where T : IToken, new() =>
-        new() { Value = value.AsMemory() };
+    private static T LexToken<T>(string value)
+        where T : IToken, new() => new() { Value = value.AsMemory() };
 }

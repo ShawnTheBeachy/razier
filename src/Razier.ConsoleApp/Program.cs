@@ -43,10 +43,48 @@ while (true)
             Console.WriteLine(ex.Message);
         }
     }
+    else if (input.StartsWith("file "))
+    {
+        try
+        {
+            FormatFile(input[5..].Trim('"'));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+    else if (input.StartsWith("csharp "))
+    {
+        try
+        {
+            CSharp(input[7..].Trim('"'));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
+
+static void CSharp(string input)
+{
+    Console.WriteLine(CSharpier.CodeFormatter.Format(input));
 }
 
 static void Format(string input)
 {
+    var formatter = new Formatter(input);
+    var formatted = formatter.Format();
+    Console.WriteLine(formatted);
+}
+
+static void FormatFile(string path)
+{
+    if (!File.Exists(path))
+        return;
+
+    var input = File.ReadAllText(path);
     var formatter = new Formatter(input);
     var formatted = formatter.Format();
     Console.WriteLine(formatted);
