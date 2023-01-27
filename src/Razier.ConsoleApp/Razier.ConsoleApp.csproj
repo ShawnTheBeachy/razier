@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Razier.Lexer\Razier.Lexer.csproj" />
     <ProjectReference Include="..\Razier.Parser\Razier.Parser.csproj" />
+    <ProjectReference Include="..\Razier.Formatter\Razier.Formatter.csproj" />
   </ItemGroup>
 
   <ItemGroup>

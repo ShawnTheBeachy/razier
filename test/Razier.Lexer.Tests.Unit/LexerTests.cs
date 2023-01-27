@@ -202,6 +202,22 @@ public sealed class LexerTests
     }
 
     [Theory]
+    [InlineData("<div />")]
+    [InlineData("<input/>")]
+    public void Lex_ShouldReturnEndTagToken_WhenGreaterThanFollowsSlash(string input)
+    {
+        // Arrange.
+        var lexer = new Lexer(input);
+
+        // Act.
+        var tokens = lexer.Lex().Where(x => x is EndTagToken);
+
+        // Assert.
+        tokens.Should().HaveCount(1);
+        tokens.First().Value.ToString().Should().Be("/>");
+    }
+
+    [Theory]
     [InlineData("  ")]
     [InlineData("")]
     public void Lex_ShouldReturnEofToken_WhenEndIsReached(string input)

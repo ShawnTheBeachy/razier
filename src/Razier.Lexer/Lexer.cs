@@ -57,6 +57,11 @@ public sealed partial class Lexer
 
     private bool CharIsWhiteSpace() => IsWhiteSpace(Char());
 
+    private IToken ConsumeEndTagTokenOrWordToken() =>
+        NextStringIs(Constants.FullEndTag)
+            ? ConsumeFixedLengthToken<EndTagToken>(Constants.FullEndTag.Length)
+            : ConsumeWordToken();
+
     private IToken ConsumeBeginTagToken() =>
         NextStringIs(Constants.BeginCloseTag)
             ? ConsumeFixedLengthToken<BeginCloseTagToken>(Constants.BeginCloseTag.Length)
@@ -109,8 +114,7 @@ public sealed partial class Lexer
             ? ConsumeFixedLengthToken<EndCommentToken>(Constants.CloseComment.Length)
             : ConsumeWordToken();
 
-    private T ConsumeFixedLengthToken<T>(int length)
-        where T : IToken, new()
+    private T ConsumeFixedLengthToken<T>(int length) where T : IToken, new()
     {
         Advance(length);
         return ReadToken<T>();
@@ -153,6 +157,7 @@ public sealed partial class Lexer
                 '\r' => ConsumeFixedLengthToken<CarriageReturnToken>(1),
                 '\t' => ConsumeFixedLengthToken<TabToken>(1),
                 '\\' => ConsumeFixedLengthToken<EscapeToken>(1),
+                '/' => ConsumeEndTagTokenOrWordToken(),
                 _ => ConsumeWordToken()
             };
     }
@@ -172,6 +177,7 @@ public sealed partial class Lexer
             && CharIsNot(Constants.SingleQuoteString)
             && CharIsNot('@')
             && CharIsNot('\\')
+            && CharIsNot('/')
             && (CharIsNot('-') || NextStringIsNot("-->"))
         );
 
@@ -247,8 +253,7 @@ public sealed partial class Lexer
 
     private bool PreviousCharIsNot(int index, char c) => !PreviousCharIs(index, c);
 
-    private T ReadToken<T>()
-        where T : IToken, new()
+    private T ReadToken<T>() where T : IToken, new()
     {
         var token = new T { Value = SliceToken() };
         StartToken();

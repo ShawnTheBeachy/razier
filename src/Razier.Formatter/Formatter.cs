@@ -21,7 +21,7 @@ public sealed partial class Formatter
 
         while (HasNotReachedEnd())
         {
-            ConsumeToken();
+            ConsumeToken(-1, false);
             Advance();
         }
 
@@ -34,25 +34,100 @@ public sealed partial class Formatter
 {
     private void Advance() => _index++;
 
-    private void ConsumeToken()
+    private void ConsumeContent(int indentLevel, bool forceNewLine)
     {
-        if (Token() is BeginTagToken)
-        {
-            IncreaseIndentation();
-            OutputLine(Token());
-        }
-        else if (Token() is HardCloseTagToken)
-        {
-            if (Token().Value != ">")
-                DecreaseIndentation();
-
-            if (PreviousToken() is BeginTagToken)
-                Output(Token());
-            else
-                OutputLine(Token());
-        }
-        else
+        if (
+            !forceNewLine
+            && !Token().Value.Contains('\r')
+            && !Token().Value.Contains('\n')
+            && PreviousTokenIs<SoftCloseTagToken>()
+            && NextTokenIs<HardCloseTagToken>()
+            && LineLength(Token(), indentLevel) < MAX_LINE_LENGTH
+        )
             Output(Token());
+        else
+        {
+            indentLevel++;
+            var nlLines = Token().Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var nlLine in nlLines)
+            {
+                var crLines = nlLine.Split('\r', StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var crLine in crLines)
+                {
+                    OutputLine(new ContentToken { Value = crLine }, indentLevel);
+                }
+            }
+        }
+    }
+
+    private void ConsumeElement(int indentLevel)
+    {
+        OutputLine(Token(), ++indentLevel);
+        var hasMultipleAttributes =
+            NextTokenIs<AttributeToken>() && NextTokenIs<AttributeToken>(_index + 1);
+
+        while (NextTokenIs<AttributeToken>())
+        {
+            Advance();
+
+            if (hasMultipleAttributes)
+                OutputLine(Token(), indentLevel + 1);
+            else
+                Output(Token(), true);
+        }
+
+        Advance();
+
+        if (TokenIs<HardCloseTagToken>())
+        {
+            if (Token().Value == ">")
+                Output(Token());
+            else if (hasMultipleAttributes)
+                OutputLine(Token(), indentLevel);
+            else
+                Output(Token(), true);
+
+            return;
+        }
+        else if (TokenIs<SoftCloseTagToken>())
+            Output(Token());
+
+        Advance();
+        var children = 0;
+
+        while (TokenIsNot<HardCloseTagToken>())
+        {
+            children++;
+            ConsumeToken(indentLevel, hasMultipleAttributes);
+            Advance();
+        }
+
+        if (
+            !hasMultipleAttributes
+            && (
+                children == 0
+                || (
+                    children == 1
+                    && PreviousTokenIs<ContentToken>()
+                    && LineLength(PreviousToken(), indentLevel) < MAX_LINE_LENGTH
+                )
+            )
+        )
+            Output(Token());
+        else
+            OutputLine(Token(), indentLevel);
+    }
+
+    private void ConsumeToken(int indentLevel, bool forceNewLine)
+    {
+        Action consume = Token() switch
+        {
+            BeginTagToken => () => ConsumeElement(indentLevel),
+            _ => () => ConsumeContent(indentLevel, forceNewLine)
+        };
+        consume();
     }
 
     private void DecreaseIndentation() => _indentationLevel--;
@@ -63,14 +138,27 @@ public sealed partial class Formatter
 
     private void IncreaseIndentation() => _indentationLevel++;
 
-    private void Output(IParsedToken token) => _output.Append(token.Value);
+    private int LineLength(IParsedToken token, int indentLevel) =>
+        token.Value.Length + (indentLevel * _indentation.Length);
 
-    private void OutputLine(IParsedToken token)
+    private bool NextTokenIs<T>() where T : IParsedToken => NextTokenIs<T>(_index);
+
+    private bool NextTokenIs<T>(int index) where T : IParsedToken =>
+        HasNotReachedEnd() && index < _tokens.Length - 1 && _tokens[index + 1] is T;
+
+    private bool NextTokenIsNot<T>() where T : IParsedToken => !NextTokenIs<T>();
+
+    private void Output(IParsedToken token, bool withSpace = false) =>
+        _output.Append($"{(withSpace ? " " : "")}{token.Value}");
+
+    private void OutputLine(IParsedToken token) => OutputLine(token, _indentationLevel);
+
+    private void OutputLine(IParsedToken token, int indentLevel)
     {
         if (_output.Length > 0)
             _output.AppendLine();
 
-        for (var i = 0; i < _indentationLevel; i++)
+        for (var i = 0; i < indentLevel; i++)
             _output.Append(_indentation);
 
         _output.Append(token.Value);
@@ -80,9 +168,27 @@ public sealed partial class Formatter
 
     private IParsedToken PreviousToken(int index) => _tokens[index - 1];
 
+    private bool PreviousTokenIs<T>() where T : IParsedToken => PreviousTokenIs<T>(_index);
+
+    private bool PreviousTokenIsNot<T>() where T : IParsedToken => !PreviousTokenIs<T>(_index);
+
+    private bool PreviousTokenIs<T>(int index) where T : IParsedToken =>
+        index > 0 && _tokens[index - 1] is T;
+
+    private bool PreviousTokenIsNot<T>(int index) where T : IParsedToken =>
+        !PreviousTokenIs<T>(index);
+
     private IParsedToken Token() => Token(_index);
 
     private IParsedToken Token(int index) => _tokens[index];
+
+    private bool TokenIs<T>() where T : IParsedToken => TokenIs<T>(_index);
+
+    private bool TokenIsNot<T>() where T : IParsedToken => TokenIsNot<T>(_index);
+
+    private bool TokenIs<T>(int index) where T : IParsedToken => _tokens[index] is T;
+
+    private bool TokenIsNot<T>(int index) where T : IParsedToken => !TokenIs<T>(index);
 }
 
 // Private fields.
@@ -93,4 +199,5 @@ public sealed partial class Formatter
     private int _index = 0;
     private readonly StringBuilder _output = new();
     private readonly IParsedToken[] _tokens;
+    private const int MAX_LINE_LENGTH = 80;
 }

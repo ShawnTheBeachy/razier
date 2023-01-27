@@ -8,5 +8,6 @@ internal static class Constants
     public const string CloseComment = "-->";
     public const char DoubleQuoteString = '"';
     public const char EndTag = '>';
+    public const string FullEndTag = "/>";
     public const char SingleQuoteString = '\'';
 }

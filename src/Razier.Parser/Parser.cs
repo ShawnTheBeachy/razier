@@ -39,8 +39,7 @@ public sealed partial class Parser
 
     private void Advance(int count) => _index += count;
 
-    private void AdvanceUntil<T>()
-        where T : IToken
+    private void AdvanceUntil<T>() where T : IToken
     {
         do
         {
@@ -48,8 +47,7 @@ public sealed partial class Parser
         } while (Token() is not T);
     }
 
-    private void AdvanceWhile<T>()
-        where T : IToken
+    private void AdvanceWhile<T>() where T : IToken
     {
         while (Token() is T)
         {
@@ -142,20 +140,7 @@ public sealed partial class Parser
         AdvanceUntil<WordToken>();
         value.AddToken(Token());
         _tagName = Token().Value.ToString();
-
-        if (NextTokenIs<EndTagToken>(true))
-        {
-            _isInTag = false;
-
-            if (!IsVoidElement(Token()))
-            {
-                _nestLevel++;
-                AdvanceUntil<EndTagToken>();
-                value.AddToken(Token());
-            }
-        }
-        else
-            _isInTag = true;
+        _isInTag = true;
 
         return new() { Value = value.ToString() };
     }
@@ -179,7 +164,11 @@ public sealed partial class Parser
         var value = new StringBuilder();
         value.AddToken(Token());
 
-        while (NextTokenIsNot<BeginOpenTagToken>() && NextTokenIsNot<BeginCloseTagToken>())
+        while (
+            NextTokenIsNot<EndOfFileToken>()
+            && NextTokenIsNot<BeginOpenTagToken>()
+            && NextTokenIsNot<BeginCloseTagToken>()
+        )
         {
             Advance();
             value.AddToken(Token());
@@ -192,7 +181,7 @@ public sealed partial class Parser
     {
         _isInTag = false;
 
-        if (IsVoidElement(_tagName!))
+        if (IsVoidElement(_tagName!) || Token().Value.ToString() == "/>")
         {
             _tagName = null;
             return new HardCloseTagToken { Value = Token().Value.ToString() };
@@ -218,8 +207,7 @@ public sealed partial class Parser
             _ => new IgnoreToken()
         };
 
-    private T ConsumeToken<T>()
-        where T : IParsedToken, new()
+    private T ConsumeToken<T>() where T : IParsedToken, new()
     {
         Advance();
         var token = new T { Value = Token().Value.ToString() };
@@ -241,8 +229,7 @@ public sealed partial class Parser
 
     private bool IsVoidElement(string type) => _voidTypes.Contains(type);
 
-    private T Last<T>()
-        where T : IToken
+    private T Last<T>() where T : IToken
     {
         var i = _index;
 
@@ -262,7 +249,7 @@ public sealed partial class Parser
     {
         var i = _index + 1;
 
-        if (i == _tokens.Length)
+        if (i >= _tokens.Length)
             return false;
 
         if (ignoreWhiteSpace)
@@ -353,6 +340,7 @@ public sealed partial class Parser
             "param",
             "source",
             "track",
-            "wbr"
+            "wbr",
+            "!DOCTYPE"
         };
 }
