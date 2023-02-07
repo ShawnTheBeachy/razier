@@ -1,8 +1,8 @@
 namespace Razier.Lexing;
 
+[Flags]
 public enum LexemeType
 {
-    Unknown,
     At,
     LeftChevron,
     RightChevron,
@@ -24,5 +24,7 @@ public enum LexemeType
     RazorKeyword,
     CSharpRazorKeyword,
     SingleQuote,
-    DoubleQuote
+    DoubleQuote,
+    Semicolon,
+    Equals
 }

@@ -82,7 +82,9 @@ public static partial class Lexer
             "\n" => LexemeType.NewLine,
             "\r" => LexemeType.CarriageReturn,
             "\t" => LexemeType.Tab,
-            _ => LexemeType.Unknown
+            ";" => LexemeType.Semicolon,
+            "=" => LexemeType.Equals,
+            _ => LexemeType.Text
         };
 }
 
@@ -109,6 +111,8 @@ public static partial class Lexer
             '\r',
             '\t',
             '\'',
-            '"'
+            '"',
+            '=',
+            ';'
         };
 }

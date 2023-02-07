@@ -1,13 +1,14 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
+using Razier.Lexing;
 
-namespace Razier.Lexing.Benchmarks;
+namespace Razier.Parsing.Benchmarks;
 
-[SimpleJob(RuntimeMoniker.Net70)]
+[SimpleJob]
 [MemoryDiagnoser]
-public class OldVsNewBenchmarks
+public class OldVsNewBenchmark
 {
-    private string Content { get; set; } = "";
+    private Lexeme[] NewLexemes { get; set; } = Array.Empty<Lexeme>();
+    private Lexer.Tokens.IToken[] OldLexemes { get; set; } = default!;
 
     [Params(
         "C:\\dev\\sdsa\\sdsa-receipt-checklist\\SDSA.ReceiptChecklist\\src\\SDSA.ReceiptChecklist.Presentation.BlazorApp\\Widgets\\Spinner.razor",
@@ -16,22 +17,26 @@ public class OldVsNewBenchmarks
     )]
     public string FilePath { get; set; } = "";
 
+    private string Source { get; set; } = "";
+
     [Benchmark]
     public void New()
     {
-        Lexer.Lex(Content).ToArray();
+        Parser.Parse(NewLexemes, Source).ToArray();
     }
 
     [Benchmark]
     public void Old()
     {
-        var lexer = new Razier.Lexer.Lexer(Content);
-        lexer.Lex().ToArray();
+        var parser = new Razier.Parser.Parser(OldLexemes);
+        parser.Parse().ToArray();
     }
 
     [GlobalSetup]
     public void ReadFile()
     {
-        Content = File.ReadAllText(FilePath);
+        Source = File.ReadAllText(FilePath);
+        NewLexemes = Lexing.Lexer.Lex(Source).ToArray();
+        OldLexemes = new Lexer.Lexer(Source).Lex().ToArray();
     }
 }

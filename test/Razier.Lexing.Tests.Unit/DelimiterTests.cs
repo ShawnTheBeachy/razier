@@ -2,7 +2,8 @@ using FluentAssertions;
 
 namespace Razier.Lexing.Tests.Unit;
 
-public sealed class DelimiterTests
+// Tests.
+public sealed partial class DelimiterTests
 {
     [Theory]
     [InlineData("  ", 3)]
@@ -22,24 +23,7 @@ public sealed class DelimiterTests
     }
 
     [Theory]
-    [InlineData("@", LexemeType.At)]
-    [InlineData("<", LexemeType.LeftChevron)]
-    [InlineData(">", LexemeType.RightChevron)]
-    [InlineData("(", LexemeType.LeftParenthesis)]
-    [InlineData(")", LexemeType.RightParenthesis)]
-    [InlineData("{", LexemeType.LeftBrace)]
-    [InlineData("}", LexemeType.RightBrace)]
-    [InlineData("/", LexemeType.ForwardSlash)]
-    [InlineData("\\", LexemeType.BackSlash)]
-    [InlineData("-", LexemeType.Dash)]
-    [InlineData("!", LexemeType.Exclamation)]
-    [InlineData("*", LexemeType.Asterisk)]
-    [InlineData("'", LexemeType.SingleQuote)]
-    [InlineData("\"", LexemeType.DoubleQuote)]
-    [InlineData(" ", LexemeType.WhiteSpace)]
-    [InlineData("\n", LexemeType.NewLine)]
-    [InlineData("\r", LexemeType.CarriageReturn)]
-    [InlineData("\t", LexemeType.Tab)]
+    [MemberData(nameof(Delimiters))]
     public void Lex_ShouldReturnCorrectLexemeType_WhenLexemeIsDelimiter(
         string input,
         LexemeType type
@@ -69,4 +53,41 @@ public sealed class DelimiterTests
         // Assert.
         lexemes.Should().HaveCount(expected);
     }
+}
+
+// Private fields.
+public sealed partial class DelimiterTests
+{
+    public static IEnumerable<object[]> Delimiters =>
+        Enum.GetValues<LexemeType>()
+            .Select(
+                x =>
+                    new object[]
+                    {
+                        x switch
+                        {
+                            LexemeType.At => "@",
+                            LexemeType.LeftChevron => "<",
+                            LexemeType.RightChevron => ">",
+                            LexemeType.LeftParenthesis => "(",
+                            LexemeType.RightParenthesis => ")",
+                            LexemeType.LeftBrace => "{",
+                            LexemeType.RightBrace => "}",
+                            LexemeType.ForwardSlash => "/",
+                            LexemeType.BackSlash => "\\",
+                            LexemeType.Dash => "-",
+                            LexemeType.Exclamation => "!",
+                            LexemeType.Asterisk => "*",
+                            LexemeType.SingleQuote => "'",
+                            LexemeType.DoubleQuote => "\"",
+                            LexemeType.WhiteSpace => " ",
+                            LexemeType.NewLine => "\n",
+                            LexemeType.CarriageReturn => "\r",
+                            LexemeType.Tab => "\t",
+                            LexemeType.Semicolon => ";",
+                            _ => throw new NotImplementedException()
+                        },
+                        x
+                    }
+            );
 }

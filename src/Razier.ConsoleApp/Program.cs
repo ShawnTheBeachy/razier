@@ -1,6 +1,8 @@
 ﻿using Razier.Formatter;
-using Razier.Lexer;
-using Razier.Parser;
+using Razier.Lexing;
+using Razier.Parsing;
+using Razier.Parsing.Tokens;
+using static Crayon.Output;
 
 while (true)
 {
@@ -9,8 +11,18 @@ while (true)
 
     if (input is null)
         continue;
-
-    if (input.StartsWith("parse "))
+    else if (input.StartsWith("parse -f "))
+    {
+        try
+        {
+            ParseFile(input[9..].Trim('"'));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+    else if (input.StartsWith("parse "))
     {
         try
         {
@@ -32,22 +44,22 @@ while (true)
             Console.WriteLine(ex.Message);
         }
     }
-    else if (input.StartsWith("format "))
+    else if (input.StartsWith("format -f "))
     {
         try
         {
-            Format(input[7..]);
+            FormatFile(input[10..].Trim('"'));
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
         }
     }
-    else if (input.StartsWith("file "))
+    else if (input.StartsWith("format "))
     {
         try
         {
-            FormatFile(input[5..].Trim('"'));
+            Format(input[7..]);
         }
         catch (Exception ex)
         {
@@ -92,23 +104,112 @@ static void FormatFile(string path)
 
 static void Lex(string input)
 {
-    var lexer = new Lexer(input!);
-    var tokens = lexer.Lex();
+    var lexemes = Lexer.Lex(input);
 
-    foreach (var token in tokens)
+    foreach (var lexeme in lexemes)
     {
-        Console.WriteLine($"{token.GetType().Name}: {token.Value}");
+        Console.WriteLine($"{lexeme.Type}: {lexeme.Value(input)}");
     }
+}
+
+static void Output(IToken token, string source)
+{
+    Action output = token switch
+    {
+        ElementToken el => () => OutputElement(el, source, ""),
+        CodeBlockToken code => () => OutputCodeBlock(code, source),
+        ImplicitRazorExpressionToken imp => () => OutputImplicitRazorExpression(imp, source),
+        LineLevelDirectiveToken directive
+            => () =>
+                Console.WriteLine(
+                    $"{nameof(LineLevelDirectiveToken)}: {Magenta(directive.Directive(source).ToString())} {directive.Line(source).ToString()}"
+                ),
+        _ => () => Console.WriteLine()
+    };
+    output();
+}
+
+static void OutputCodeBlock(CodeBlockToken code, string source)
+{
+    Console.WriteLine($"{nameof(CodeBlockToken)}: {Magenta(code.Open(source).ToString())}");
+    Console.WriteLine(Yellow("  Contents:"));
+
+    foreach (var child in code.Children)
+        if (child is ElementToken element)
+            OutputElement(element, source, "");
+        else if (child is CSharpToken cSharp)
+            Console.WriteLine(Dim(cSharp.Code(source).ToString()));
+
+    Console.WriteLine(Magenta(code.Close(source).ToString()));
+}
+
+static void OutputControlStructure(ControlStructureToken control, string source)
+{
+    Console.WriteLine(
+        $"{nameof(ControlStructureToken)}: {Magenta(control.Open(source).ToString())}"
+    );
+    Console.WriteLine(
+        $"{Yellow("  Expression:")} {Magenta(control.Expression(source).ToString())}"
+    );
+    Console.WriteLine(Yellow("  Contents:"));
+
+    foreach (var child in control.Children)
+        if (child is ElementToken element)
+            OutputElement(element, source, "");
+        else if (child is CSharpToken cSharp)
+            Console.WriteLine(Dim(cSharp.Code(source).ToString()));
+
+    Console.WriteLine(Magenta(control.Close(source).ToString()));
+}
+
+static void OutputElement(ElementToken token, string source, string prefix)
+{
+    Console.WriteLine($"{prefix}{nameof(ElementToken)}: {Magenta(token.Name(source).ToString())}");
+    Console.WriteLine(Yellow($"{prefix}  Attributes:"));
+
+    foreach (var attribute in token.Attributes)
+        Console.WriteLine(
+            $"{prefix}    {Dim(attribute.Key(source).ToString())}: {Magenta(attribute.Value(source).ToString())}"
+        );
+
+    Console.WriteLine(Yellow($"{prefix}  Children:"));
+
+    foreach (var child in token.Children)
+        if (child is ElementToken element)
+            OutputElement(element, source, $"    {prefix}");
+        else if (child is ControlStructureToken control)
+            OutputControlStructure(control, source);
+        else if (child is CodeBlockToken code)
+            OutputCodeBlock(code, source);
+        else if (child is ImplicitRazorExpressionToken imp)
+            OutputImplicitRazorExpression(imp, source);
+        else
+            Console.WriteLine(child);
+}
+
+static void OutputImplicitRazorExpression(ImplicitRazorExpressionToken token, string source)
+{
+    Console.WriteLine(
+        $"{nameof(ImplicitRazorExpressionToken)}: {Dim(token.Value(source).ToString())}"
+    );
 }
 
 static void Parse(string input)
 {
-    var lexer = new Lexer(input!);
-    var parser = new Parser(lexer.Lex().ToArray());
-    var tokens = parser.Parse();
+    var tokens = Parser.Parse(input);
 
     foreach (var token in tokens)
-    {
-        Console.WriteLine($"{token.GetType().Name}: {token.Value}");
-    }
+        Output(token, input);
+}
+
+static void ParseFile(string path)
+{
+    if (!File.Exists(path))
+        return;
+
+    var input = File.ReadAllText(path);
+    var tokens = Parser.Parse(input);
+
+    foreach (var token in tokens)
+        Output(token, input);
 }

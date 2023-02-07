@@ -1,4 +1,4 @@
 ﻿using BenchmarkDotNet.Running;
-using Razier.Lexing.Benchmarks;
+using Razier.Parsing.Benchmarks;
 
 BenchmarkRunner.Run<OldVsNewBenchmark>();

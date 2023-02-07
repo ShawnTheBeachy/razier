@@ -33,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmark", "benchmark", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexing.Benchmarks", "benchmark\Razier.Lexing.Benchmarks\Razier.Lexing.Benchmarks.csproj", "{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parsing.Benchmarks", "benchmark\Razier.Parsing.Benchmarks\Razier.Parsing.Benchmarks.csproj", "{1BEA439D-A1E4-441E-AB83-B91C50B1A304}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -90,6 +92,10 @@ Global
 		{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6DEABAE5-19D6-435F-9379-9CDFE3F8D750} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
@@ -104,5 +110,6 @@ Global
 		{CB6FC578-254F-4C0C-B00E-090B6F630205} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{B558C2F7-CF04-4967-9280-F00DE620AE2D} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA} = {43E0EC53-88A7-4626-A72E-026C384944EF}
+		{1BEA439D-A1E4-441E-AB83-B91C50B1A304} = {43E0EC53-88A7-4626-A72E-026C384944EF}
 	EndGlobalSection
 EndGlobal
