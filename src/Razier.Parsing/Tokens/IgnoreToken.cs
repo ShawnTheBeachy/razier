@@ -1,3 +1,3 @@
 namespace Razier.Parsing.Tokens;
 
-public record struct IgnoreToken : IToken { }
+public readonly record struct IgnoreToken : IToken { }

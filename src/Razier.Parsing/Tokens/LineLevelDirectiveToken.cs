@@ -1,6 +1,6 @@
 namespace Razier.Parsing.Tokens;
 
-public record struct LineLevelDirectiveToken : IToken
+public readonly record struct LineLevelDirectiveToken : IToken
 {
     public int DirectiveLength { get; init; }
     public int DirectiveOffset { get; init; }

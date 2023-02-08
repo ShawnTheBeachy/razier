@@ -5,6 +5,20 @@ namespace Razier.Parsing.Tests.Unit;
 
 public sealed class CodeBlockTests
 {
+    [Fact]
+    public void Close_ShouldReturnRightBrace_WhenCalled()
+    {
+        // Arrange.
+        var input = "@code { }";
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is CodeBlockToken);
+        var code = (CodeBlockToken)tokens.First();
+
+        // Assert.
+        code.Close(input).ToString().Should().Be("}");
+    }
+
     [Theory]
     [InlineData("@code", false)]
     [InlineData("@code { }", true)]

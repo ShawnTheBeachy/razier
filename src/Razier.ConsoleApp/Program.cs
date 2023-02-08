@@ -1,4 +1,4 @@
-﻿using Razier.Formatter;
+﻿using Razier.Formatting;
 using Razier.Lexing;
 using Razier.Parsing;
 using Razier.Parsing.Tokens;
@@ -12,71 +12,17 @@ while (true)
     if (input is null)
         continue;
     else if (input.StartsWith("parse -f "))
-    {
-        try
-        {
-            ParseFile(input[9..].Trim('"'));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        ParseFile(input[9..].Trim('"'));
     else if (input.StartsWith("parse "))
-    {
-        try
-        {
-            Parse(input[6..]);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        Parse(input[6..]);
     else if (input.StartsWith("lex "))
-    {
-        try
-        {
-            Lex(input[4..]);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        Lex(input[4..]);
     else if (input.StartsWith("format -f "))
-    {
-        try
-        {
-            FormatFile(input[10..].Trim('"'));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        FormatFile(input[10..].Trim('"'));
     else if (input.StartsWith("format "))
-    {
-        try
-        {
-            Format(input[7..]);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        Format(input[7..]);
     else if (input.StartsWith("csharp "))
-    {
-        try
-        {
-            CSharp(input[7..].Trim('"'));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
+        CSharp(input[7..].Trim('"'));
 }
 
 static void CSharp(string input)
@@ -86,8 +32,7 @@ static void CSharp(string input)
 
 static void Format(string input)
 {
-    var formatter = new Formatter(input);
-    var formatted = formatter.Format();
+    var formatted = Formatter.Format(input);
     Console.WriteLine(formatted);
 }
 
@@ -97,8 +42,7 @@ static void FormatFile(string path)
         return;
 
     var input = File.ReadAllText(path);
-    var formatter = new Formatter(input);
-    var formatted = formatter.Format();
+    var formatted = Formatter.Format(input);
     Console.WriteLine(formatted);
 }
 
@@ -117,6 +61,8 @@ static void Output(IToken token, string source)
     Action output = token switch
     {
         ElementToken el => () => OutputElement(el, source, ""),
+        CommentToken comment => () => OutputComment(comment, source),
+        ControlStructureToken control => () => OutputControlStructure(control, source),
         CodeBlockToken code => () => OutputCodeBlock(code, source),
         ImplicitRazorExpressionToken imp => () => OutputImplicitRazorExpression(imp, source),
         LineLevelDirectiveToken directive
@@ -143,7 +89,14 @@ static void OutputCodeBlock(CodeBlockToken code, string source)
     Console.WriteLine(Magenta(code.Close(source).ToString()));
 }
 
-static void OutputControlStructure(ControlStructureToken control, string source)
+static void OutputComment(CommentToken comment, string source, string prefix = "")
+{
+    Console.WriteLine(
+        $"{prefix}{nameof(CommentToken)}: {Magenta($"{comment.Open(source)} {comment.Content(source)} {comment.Close(source)}")}"
+    );
+}
+
+static void OutputControlStructure(ControlStructureToken control, string source, string prefix = "")
 {
     Console.WriteLine(
         $"{nameof(ControlStructureToken)}: {Magenta(control.Open(source).ToString())}"
@@ -155,9 +108,11 @@ static void OutputControlStructure(ControlStructureToken control, string source)
 
     foreach (var child in control.Children)
         if (child is ElementToken element)
-            OutputElement(element, source, "");
+            OutputElement(element, source, $"{prefix}  ");
         else if (child is CSharpToken cSharp)
             Console.WriteLine(Dim(cSharp.Code(source).ToString()));
+        else if (child is CommentToken comment)
+            OutputComment(comment, source);
 
     Console.WriteLine(Magenta(control.Close(source).ToString()));
 }
@@ -176,21 +131,29 @@ static void OutputElement(ElementToken token, string source, string prefix)
 
     foreach (var child in token.Children)
         if (child is ElementToken element)
-            OutputElement(element, source, $"    {prefix}");
+            OutputElement(element, source, $"{prefix}    ");
         else if (child is ControlStructureToken control)
-            OutputControlStructure(control, source);
+            OutputControlStructure(control, source, $"{prefix}    ");
         else if (child is CodeBlockToken code)
             OutputCodeBlock(code, source);
         else if (child is ImplicitRazorExpressionToken imp)
-            OutputImplicitRazorExpression(imp, source);
+            OutputImplicitRazorExpression(imp, source, $"{prefix}    ");
+        else if (child is CommentToken comment)
+            OutputComment(comment, source, $"{prefix}    ");
+        else if (child is TextToken text)
+            Console.WriteLine(Dim($"{prefix}    {text.Value(source)}"));
         else
             Console.WriteLine(child);
 }
 
-static void OutputImplicitRazorExpression(ImplicitRazorExpressionToken token, string source)
+static void OutputImplicitRazorExpression(
+    ImplicitRazorExpressionToken token,
+    string source,
+    string prefix = ""
+)
 {
     Console.WriteLine(
-        $"{nameof(ImplicitRazorExpressionToken)}: {Dim(token.Value(source).ToString())}"
+        $"{prefix}{nameof(ImplicitRazorExpressionToken)}: {Dim(token.Value(source).ToString())}"
     );
 }
 

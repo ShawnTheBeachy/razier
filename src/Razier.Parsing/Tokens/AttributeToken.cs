@@ -1,6 +1,6 @@
 namespace Razier.Parsing.Tokens;
 
-public record struct AttributeToken : IToken
+public readonly record struct AttributeToken : IToken
 {
     public int KeyLength { get; init; }
     public int KeyOffset { get; init; }

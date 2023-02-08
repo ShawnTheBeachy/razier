@@ -5,43 +5,42 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DB13EFBB-9493-44FD-8D64-81902747B5AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.ConsoleApp", "src\Razier.ConsoleApp\Razier.ConsoleApp.csproj", "{6DEABAE5-19D6-435F-9379-9CDFE3F8D750}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.ConsoleApp", "src\Razier.ConsoleApp\Razier.ConsoleApp.csproj", "{6DEABAE5-19D6-435F-9379-9CDFE3F8D750}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatter", "src\Razier.Formatter\Razier.Formatter.csproj", "{E802A603-D397-4901-A6B1-86B33622D7E0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Formatter", "src\Razier.Formatter\Razier.Formatter.csproj", "{E802A603-D397-4901-A6B1-86B33622D7E0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexer", "src\Razier.Lexer\Razier.Lexer.csproj", "{6B8A4272-02F0-40B4-A08E-FCC2A8FAD438}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Lexer", "src\Razier.Lexer\Razier.Lexer.csproj", "{6B8A4272-02F0-40B4-A08E-FCC2A8FAD438}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parser", "src\Razier.Parser\Razier.Parser.csproj", "{191CE29B-353D-473A-AEBE-A74F2A9CAE97}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Parser", "src\Razier.Parser\Razier.Parser.csproj", "{191CE29B-353D-473A-AEBE-A74F2A9CAE97}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{190DB6AC-9EA1-45C6-9028-9875D962B4AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatter.Tests.Unit", "test\Razier.Formatter.Tests.Unit\Razier.Formatter.Tests.Unit.csproj", "{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Lexer.Tests.Unit", "test\Razier.Lexer.Tests.Unit\Razier.Lexer.Tests.Unit.csproj", "{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexer.Tests.Unit", "test\Razier.Lexer.Tests.Unit\Razier.Lexer.Tests.Unit.csproj", "{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Parser.Tests.Unit", "test\Razier.Parser.Tests.Unit\Razier.Parser.Tests.Unit.csproj", "{8028B4FB-8E28-45D1-8A25-55CADC342D22}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parser.Tests.Unit", "test\Razier.Parser.Tests.Unit\Razier.Parser.Tests.Unit.csproj", "{8028B4FB-8E28-45D1-8A25-55CADC342D22}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Lexing.Tests.Unit", "test\Razier.Lexing.Tests.Unit\Razier.Lexing.Tests.Unit.csproj", "{89CE4753-9913-48F6-9759-2CEFF4306BE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexing.Tests.Unit", "test\Razier.Lexing.Tests.Unit\Razier.Lexing.Tests.Unit.csproj", "{89CE4753-9913-48F6-9759-2CEFF4306BE0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Parsing.Tests.Unit", "test\Razier.Parsing.Tests.Unit\Razier.Parsing.Tests.Unit.csproj", "{87CFCCC1-CABA-410E-8676-DFCD364523DF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parsing.Tests.Unit", "test\Razier.Parsing.Tests.Unit\Razier.Parsing.Tests.Unit.csproj", "{87CFCCC1-CABA-410E-8676-DFCD364523DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Lexing", "src\Razier.Lexing\Razier.Lexing.csproj", "{CB6FC578-254F-4C0C-B00E-090B6F630205}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexing", "src\Razier.Lexing\Razier.Lexing.csproj", "{CB6FC578-254F-4C0C-B00E-090B6F630205}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parsing", "src\Razier.Parsing\Razier.Parsing.csproj", "{B558C2F7-CF04-4967-9280-F00DE620AE2D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Parsing", "src\Razier.Parsing\Razier.Parsing.csproj", "{B558C2F7-CF04-4967-9280-F00DE620AE2D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmark", "benchmark", "{43E0EC53-88A7-4626-A72E-026C384944EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Lexing.Benchmarks", "benchmark\Razier.Lexing.Benchmarks\Razier.Lexing.Benchmarks.csproj", "{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Lexing.Benchmarks", "benchmark\Razier.Lexing.Benchmarks\Razier.Lexing.Benchmarks.csproj", "{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Parsing.Benchmarks", "benchmark\Razier.Parsing.Benchmarks\Razier.Parsing.Benchmarks.csproj", "{1BEA439D-A1E4-441E-AB83-B91C50B1A304}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Razier.Parsing.Benchmarks", "benchmark\Razier.Parsing.Benchmarks\Razier.Parsing.Benchmarks.csproj", "{1BEA439D-A1E4-441E-AB83-B91C50B1A304}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatting.Tests.Unit", "test\Razier.Formatting.Tests.Unit\Razier.Formatting.Tests.Unit.csproj", "{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatting", "src\Razier.Formatting\Razier.Formatting.csproj", "{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{6DEABAE5-19D6-435F-9379-9CDFE3F8D750}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -60,10 +59,6 @@ Global
 		{191CE29B-353D-473A-AEBE-A74F2A9CAE97}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{191CE29B-353D-473A-AEBE-A74F2A9CAE97}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{191CE29B-353D-473A-AEBE-A74F2A9CAE97}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -96,13 +91,23 @@ Global
 		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BEA439D-A1E4-441E-AB83-B91C50B1A304}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6DEABAE5-19D6-435F-9379-9CDFE3F8D750} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{E802A603-D397-4901-A6B1-86B33622D7E0} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{6B8A4272-02F0-40B4-A08E-FCC2A8FAD438} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{191CE29B-353D-473A-AEBE-A74F2A9CAE97} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
-		{D842EB53-D37E-491A-8DE7-6B94DAB7DF0E} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
 		{E4B8FD7E-1767-4792-BFB9-4C1E658C63F2} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
 		{8028B4FB-8E28-45D1-8A25-55CADC342D22} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
 		{89CE4753-9913-48F6-9759-2CEFF4306BE0} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
@@ -111,5 +116,7 @@ Global
 		{B558C2F7-CF04-4967-9280-F00DE620AE2D} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 		{1DCF2709-8E3B-4949-B2E9-416BF52DBAFA} = {43E0EC53-88A7-4626-A72E-026C384944EF}
 		{1BEA439D-A1E4-441E-AB83-B91C50B1A304} = {43E0EC53-88A7-4626-A72E-026C384944EF}
+		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
+		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
 	EndGlobalSection
 EndGlobal

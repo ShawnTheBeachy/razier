@@ -34,7 +34,7 @@ public static partial class Parser
 // Private methods.
 public static partial class Parser
 {
-    private static AttributeToken ConsumeAttribute(Lexeme[] lexemes, ref int index, string source)
+    private static AttributeToken ConsumeAttribute(Lexeme[] lexemes, ref int index)
     {
         var token = new AttributeToken { KeyOffset = lexemes[index].Offset };
 
@@ -42,15 +42,16 @@ public static partial class Parser
         {
             index++;
         } while (
-            lexemes[index].Type != LexemeType.Equals && !lexemes[index].Type.IsAnyWhiteSpaceType()
+            lexemes[index].Type != LexemeType.Equals
+            && !lexemes[index].Type.IsAnyWhiteSpaceType()
+            && lexemes[index].Type != LexemeType.ForwardSlash
+            && lexemes[index].Type != LexemeType.RightChevron
         );
 
         token = token with { KeyLength = lexemes[index].Offset - token.KeyOffset };
 
         while (lexemes[index].Type.IsAnyWhiteSpaceType())
-        {
             index++;
-        }
 
         if (lexemes[index].Type != LexemeType.Equals)
             return token;
@@ -58,26 +59,79 @@ public static partial class Parser
         do
         {
             index++;
-        } while (
-            lexemes[index].Type != LexemeType.DoubleQuote
-            && lexemes[index].Type != LexemeType.SingleQuote
-        );
+        } while (IsAnyWhiteSpaceType(lexemes[index].Type));
 
-        token = token with { ValueOffset = lexemes[index + 1].Offset };
-        var delimiter = lexemes[index++].Type;
+        LexemeType? delimiter = null;
 
-        while (lexemes[index].Type != delimiter || IsEscaped(lexemes, index))
+        if (
+            lexemes[index].Type == LexemeType.DoubleQuote
+            || lexemes[index].Type == LexemeType.SingleQuote
+        )
         {
+            delimiter = lexemes[index].Type;
+            token = token with { ValueOffset = lexemes[++index].Offset };
+        }
+        else
+            token = token with { ValueOffset = lexemes[index].Offset };
+
+        var razorExpressionNestLevel = 0;
+        var isInRazorExpressionString = false;
+
+        while (
+            razorExpressionNestLevel > 0
+            || (
+                delimiter is null
+                && lexemes[index].Type != LexemeType.ForwardSlash
+                && lexemes[index].Type != LexemeType.RightChevron
+                && !IsAnyWhiteSpaceType(lexemes[index].Type)
+            )
+            || (
+                delimiter is not null
+                && (lexemes[index].Type != delimiter || IsEscaped(lexemes, index))
+            )
+        )
+        {
+            if (
+                !isInRazorExpressionString
+                && razorExpressionNestLevel > 0
+                && lexemes[index].Type == LexemeType.LeftParenthesis
+            )
+                razorExpressionNestLevel++;
+            else if (
+                lexemes[index].Type == LexemeType.At
+                && lexemes[index + 1].Type == LexemeType.LeftParenthesis
+            )
+            {
+                razorExpressionNestLevel++;
+                index++;
+            }
+            else if (
+                !isInRazorExpressionString && lexemes[index].Type == LexemeType.RightParenthesis
+            )
+                razorExpressionNestLevel--;
+            else if (
+                razorExpressionNestLevel > 0
+                && lexemes[index].Type == LexemeType.DoubleQuote
+                && !IsEscaped(lexemes, index)
+            )
+                isInRazorExpressionString = !isInRazorExpressionString;
+
             index++;
         }
 
-        return token with
-        {
-            ValueLength = lexemes[index++].Offset - token.ValueOffset
-        };
+        token = token with { ValueLength = lexemes[index].Offset - token.ValueOffset };
+
+        if (delimiter is not null)
+            index++;
+
+        return token;
     }
 
-    private static CodeBlockToken ConsumeCodeBlock(Lexeme[] lexemes, ref int index, string source)
+    private static CodeBlockToken ConsumeCodeBlock(
+        Lexeme[] lexemes,
+        ref int index,
+        ReadOnlySpan<char> source
+    )
     {
         var token = new CodeBlockToken { OpenOffset = lexemes[index].Offset };
 
@@ -86,7 +140,7 @@ public static partial class Parser
 
         token = token with { OpenLength = lexemes[++index].Offset - token.OpenOffset };
         token = token with { Children = ConsumeCodeBlockContent(lexemes, ref index, source) };
-        token = token with { CloseOffset = index };
+        token = token with { CloseOffset = lexemes[index].Offset };
         index++;
         return token;
     }
@@ -94,18 +148,24 @@ public static partial class Parser
     private static List<IToken> ConsumeCodeBlockContent(
         Lexeme[] lexemes,
         ref int index,
-        string source
+        ReadOnlySpan<char> source
     )
     {
         var tokens = new List<IToken>();
 
         while (index < lexemes.Length && lexemes[index].Type != LexemeType.RightBrace)
         {
+            if (IsAnyWhiteSpaceType(lexemes[index].Type))
+            {
+                index++;
+                continue;
+            }
+
             tokens.Add(
                 lexemes[index].Type switch
                 {
                     LexemeType.LeftChevron => ConsumeElement(lexemes, ref index, source),
-                    _ => ConsumeCSharp(lexemes, ref index, source)
+                    _ => ConsumeCSharp(lexemes, ref index)
                 }
             );
         }
@@ -116,7 +176,7 @@ public static partial class Parser
     private static ControlStructureToken ConsumeControlStructure(
         Lexeme[] lexemes,
         ref int index,
-        string source
+        ReadOnlySpan<char> source
     )
     {
         var token = new ControlStructureToken { OpenOffset = lexemes[index].Offset };
@@ -187,33 +247,48 @@ public static partial class Parser
         return token;
     }
 
-    private static CSharpToken ConsumeCSharp(Lexeme[] lexemes, ref int index, string source)
+    private static CSharpToken ConsumeCSharp(Lexeme[] lexemes, ref int index)
     {
         var isInString = false;
         var isInStatement = true;
+        var expressionNestLevel = 0;
         var nestLevel = 0;
         var token = new CSharpToken { Offset = lexemes[index].Offset };
 
         while (
             index < lexemes.Length
             && (lexemes[index].Type != LexemeType.RightBrace || nestLevel > 0)
-            && (isInStatement || isInString || lexemes[index].Type != LexemeType.LeftChevron)
+            && (
+                isInString
+                || isInStatement
+                || expressionNestLevel > 0
+                || lexemes[index].Type != LexemeType.LeftChevron
+            )
         )
         {
-            if (lexemes[index].Type == LexemeType.LeftBrace && !isInString)
+            if (lexemes[index].Type == LexemeType.DoubleQuote && !IsEscaped(lexemes, index))
+                isInString = !isInString;
+            else if (isInString || IsAnyWhiteSpaceType(lexemes[index].Type))
             {
-                isInStatement = false;
-                nestLevel++;
+                index++;
+                continue;
             }
-            else if (lexemes[index].Type == LexemeType.RightBrace && !isInString)
+
+            if (lexemes[index].Type == LexemeType.LeftParenthesis)
+                expressionNestLevel++;
+            else if (lexemes[index].Type == LexemeType.RightParenthesis)
+                expressionNestLevel--;
+            else if (lexemes[index].Type == LexemeType.LeftBrace)
+                nestLevel++;
+            else if (lexemes[index].Type == LexemeType.RightBrace)
             {
                 isInStatement = false;
                 nestLevel--;
             }
-            else if (lexemes[index].Type == LexemeType.Semicolon && !isInString)
+            else if (lexemes[index].Type == LexemeType.Semicolon)
                 isInStatement = false;
-            else if (lexemes[index].Type == LexemeType.DoubleQuote && !IsEscaped(lexemes, index))
-                isInString = !isInString;
+            else
+                isInStatement = true;
 
             index++;
         }
@@ -224,7 +299,11 @@ public static partial class Parser
         };
     }
 
-    private static ElementToken ConsumeElement(Lexeme[] lexemes, ref int index, string source)
+    private static ElementToken ConsumeElement(
+        Lexeme[] lexemes,
+        ref int index,
+        ReadOnlySpan<char> source
+    )
     {
         var token = new ElementToken
         {
@@ -232,23 +311,18 @@ public static partial class Parser
             NameOffset = lexemes[index++].Offset
         };
 
-        while (index < lexemes.Length)
+        while (index < lexemes.Length && lexemes[index].Type != LexemeType.RightChevron)
         {
-            if (lexemes[index].Type == LexemeType.RightChevron)
-            {
-                break;
-            }
-
             if (
                 lexemes[index].Type == LexemeType.ForwardSlash
                 && lexemes[index + 1].Type == LexemeType.RightChevron
             )
                 return token;
 
-            if (lexemes[index].Type == LexemeType.Text)
-                token.Attributes.Add(ConsumeAttribute(lexemes, ref index, source));
-            else
+            if (IsAnyWhiteSpaceType(lexemes[index].Type))
                 index++;
+            else
+                token.Attributes.Add(ConsumeAttribute(lexemes, ref index));
         }
 
         if (IsVoidElement(token.Name(source).ToString()))
@@ -256,7 +330,7 @@ public static partial class Parser
 
         index++;
 
-        for (; index < lexemes.Length; index++)
+        while (index < lexemes.Length)
         {
             if (
                 lexemes[index].Type == LexemeType.LeftChevron
@@ -275,6 +349,8 @@ public static partial class Parser
 
             if (child is not IgnoreToken)
                 token.Children.Add(child);
+            else
+                index++;
         }
 
         return token;
@@ -311,10 +387,35 @@ public static partial class Parser
         };
     }
 
+    private static CommentToken ConsumeHtmlComment(Lexeme[] lexemes, ref int index)
+    {
+        var token = new CommentToken { OpenLength = 4, OpenOffset = lexemes[index].Offset };
+        index += 4;
+        token = token with { ContentOffset = lexemes[index].Offset };
+
+        while (
+            lexemes[index].Type != LexemeType.Dash
+            || lexemes[index + 1].Type != LexemeType.Dash
+            || lexemes[index + 2].Type != LexemeType.RightChevron
+        )
+        {
+            index++;
+        }
+
+        token = token with
+        {
+            CloseLength = 3,
+            CloseOffset = lexemes[index].Offset,
+            ContentLength = lexemes[index].Offset - token.ContentOffset
+        };
+        index += 3;
+        return token;
+    }
+
     private static ImplicitRazorExpressionToken ConsumeImplicitRazorExpression(
         Lexeme[] lexemes,
         ref int index,
-        string source
+        ReadOnlySpan<char> source
     )
     {
         var token = new ImplicitRazorExpressionToken { Offset = lexemes[index++].Offset };
@@ -339,13 +440,15 @@ public static partial class Parser
         )
             index++;
 
-        return token = token with { Length = lexemes[index].Offset - token.Offset };
+        return token with
+        {
+            Length = lexemes[index].Offset - token.Offset
+        };
     }
 
     private static LineLevelDirectiveToken ConsumeLineLevelDirective(
         Lexeme[] lexemes,
-        ref int index,
-        string source
+        ref int index
     )
     {
         var token = new LineLevelDirectiveToken { DirectiveOffset = lexemes[index].Offset };
@@ -366,54 +469,135 @@ public static partial class Parser
         )
             index++;
 
-        return token = token with { LineLength = lexemes[index].Offset - token.LineOffset };
+        return token with
+        {
+            LineLength = lexemes[index].Offset - token.LineOffset
+        };
     }
 
-    private static IToken ConsumeToken(Lexeme[] lexemes, ref int index, string source)
+    private static NewLineToken ConsumeNewLine(Lexeme[] lexemes, ref int index) =>
+        new NewLineToken { Offset = lexemes[index++].Offset };
+
+    private static CommentToken ConsumeRazorComment(Lexeme[] lexemes, ref int index)
+    {
+        var token = new CommentToken { OpenLength = 2, OpenOffset = lexemes[index++].Offset };
+        token = token with { ContentOffset = lexemes[++index].Offset };
+
+        while (
+            lexemes[index].Type != LexemeType.Asterisk || lexemes[index + 1].Type != LexemeType.At
+        )
+        {
+            index++;
+        }
+
+        token = token with
+        {
+            CloseLength = 2,
+            CloseOffset = lexemes[index].Offset,
+            ContentLength = lexemes[index].Offset - token.ContentOffset
+        };
+        index += 2;
+        return token;
+    }
+
+    private static TextToken ConsumeText(Lexeme[] lexemes, ref int index, ReadOnlySpan<char> source)
+    {
+        var token = new TextToken { Offset = lexemes[index].Offset };
+        TokenType tokenType;
+
+        do
+        {
+            index++;
+        } while (
+            (tokenType = GetTokenType(lexemes, index, source)) == TokenType.Text
+            || tokenType == TokenType.Ignore
+        );
+
+        return token with
+        {
+            Length = lexemes[index].Offset - token.Offset
+        };
+    }
+
+    private static IToken ConsumeToken(
+        Lexeme[] lexemes,
+        ref int index,
+        ReadOnlySpan<char> source
+    ) =>
+        GetTokenType(lexemes, index, source) switch
+        {
+            TokenType.ControlStructure => ConsumeControlStructure(lexemes, ref index, source),
+            TokenType.ExplicitRazorExpression => ConsumeExplicitRazorExpression(lexemes, ref index),
+            TokenType.CodeBlock => ConsumeCodeBlock(lexemes, ref index, source),
+            TokenType.LineLevelDirective => ConsumeLineLevelDirective(lexemes, ref index),
+            TokenType.ImplicitRazorExpression
+                => ConsumeImplicitRazorExpression(lexemes, ref index, source),
+            TokenType.Element => ConsumeElement(lexemes, ref index, source),
+            TokenType.HtmlComment => ConsumeHtmlComment(lexemes, ref index),
+            TokenType.RazorComment => ConsumeRazorComment(lexemes, ref index),
+            TokenType.Text => ConsumeText(lexemes, ref index, source),
+            TokenType.NewLine or TokenType.CarriageReturn => ConsumeNewLine(lexemes, ref index),
+            _ => new IgnoreToken()
+        };
+
+    private static TokenType GetTokenType(Lexeme[] lexemes, int index, ReadOnlySpan<char> source)
     {
         Lexeme? l;
 
-        IToken token = lexemes[index].Type switch
+        return lexemes[index].Type switch
         {
+            LexemeType.CarriageReturn => TokenType.CarriageReturn,
+            LexemeType.NewLine => TokenType.NewLine,
             LexemeType.Text
                 when _followingControlStructureKeywords.Contains(
                     lexemes[index].Value(source).ToString()
                 )
-                => ConsumeControlStructure(lexemes, ref index, source),
+                => TokenType.ControlStructure,
+            LexemeType.Text => TokenType.Text,
+            LexemeType.At when lexemes[index + 1].Type == LexemeType.Asterisk
+                => TokenType.RazorComment,
             LexemeType.At
                 when lexemes[index + 1].Type == LexemeType.LeftParenthesis
                     && (index == 0 || lexemes[index - 1].Type != LexemeType.At)
-                => ConsumeExplicitRazorExpression(lexemes, ref index),
+                => TokenType.ExplicitRazorExpression,
             LexemeType.At
                 when lexemes[index + 1].Type == LexemeType.LeftBrace
                     || (
                         (l = lexemes.Next(LexemeType.Text, index)).HasValue
                         && IsCodeBlockDirective(l.Value, source)
-                        && (l = lexemes.Next(LexemeType.LeftBrace, index + 2)).HasValue
+                        && (lexemes.Next(LexemeType.LeftBrace, index + 2)).HasValue
                     )
-                => ConsumeCodeBlock(lexemes, ref index, source),
+                => TokenType.CodeBlock,
             LexemeType.At
                 when lexemes[index + 1].Type == LexemeType.Text
                     && IsControlStructureKeyword(lexemes, index + 1, source)
-                => ConsumeControlStructure(lexemes, ref index, source),
+                => TokenType.ControlStructure,
             LexemeType.At
                 when IsLineLevelDirective(lexemes[index + 1], source) && IsLineStart(lexemes, index)
-                => ConsumeLineLevelDirective(lexemes, ref index, source),
-            LexemeType.At => ConsumeImplicitRazorExpression(lexemes, ref index, source),
-            LexemeType.LeftChevron => ConsumeElement(lexemes, ref index, source),
-            _ => new IgnoreToken()
+                => TokenType.LineLevelDirective,
+            LexemeType.At => TokenType.ImplicitRazorExpression,
+            LexemeType.LeftChevron
+                when lexemes[index + 1].Type == LexemeType.Exclamation
+                    && lexemes[index + 2].Type == LexemeType.Dash
+                    && lexemes[index + 3].Type == LexemeType.Dash
+                => TokenType.HtmlComment,
+            LexemeType.LeftChevron => TokenType.Element,
+            _ => TokenType.Ignore
         };
-        return token;
     }
 
-    private static bool IsCodeBlockDirective(Lexeme lexeme, string source)
+    private static bool IsCodeBlockDirective(Lexeme lexeme, ReadOnlySpan<char> source)
     {
         var value = lexeme.Value(source);
         return MemoryExtensions.Equals("code", value, StringComparison.Ordinal)
             || MemoryExtensions.Equals("functions", value, StringComparison.Ordinal);
     }
 
-    private static bool IsControlStructureKeyword(Lexeme[] lexemes, int index, string source)
+    private static bool IsControlStructureKeyword(
+        Lexeme[] lexemes,
+        int index,
+        ReadOnlySpan<char> source
+    )
     {
         var value = lexemes[index].Value(source).ToString();
 
@@ -444,7 +628,7 @@ public static partial class Parser
         return !IsEscaped(lexemes, index - 1);
     }
 
-    private static bool IsLineLevelDirective(Lexeme lexeme, string source) =>
+    private static bool IsLineLevelDirective(Lexeme lexeme, ReadOnlySpan<char> source) =>
         _lineLevelDirectives.Contains(lexeme.Value(source).ToString());
 
     private static bool IsLineStart(Lexeme[] lexemes, int index)
@@ -584,4 +768,26 @@ public static partial class Parser
             "wbr",
             "!DOCTYPE"
         };
+}
+
+// Sub-types.
+public static partial class Parser
+{
+    private enum TokenType
+    {
+        Attribute,
+        CodeBlock,
+        ControlStructure,
+        CSharpToken,
+        Element,
+        ExplicitRazorExpression,
+        HtmlComment,
+        Ignore,
+        ImplicitRazorExpression,
+        LineLevelDirective,
+        RazorComment,
+        Text,
+        CarriageReturn,
+        NewLine
+    }
 }

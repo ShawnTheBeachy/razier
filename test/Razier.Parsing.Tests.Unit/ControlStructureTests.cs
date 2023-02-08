@@ -72,6 +72,7 @@ public sealed class ControlStructureTests
     [Theory]
     [InlineData("@while (value) {<div></div>}")]
     [InlineData("@foreach (value) { var x = 1;\n<div></div>}")]
+    [InlineData("@foreach (value) { <div></div>}")]
     public void Parse_ShouldSwitchToHtml_WhenOpenTagIsEncountered(string input)
     {
         // Arrange.

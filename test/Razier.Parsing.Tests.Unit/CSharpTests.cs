@@ -6,8 +6,8 @@ namespace Razier.Parsing.Tests.Unit;
 public sealed class CSharpTests
 {
     [Theory]
-    [InlineData("@{ foreach() { } }", " foreach() { } ")]
-    [InlineData("@{ while() { foreach() { } } }", " while() { foreach() { } } ")]
+    [InlineData("@{ foreach() { } }", "foreach() { } ")]
+    [InlineData("@{ while() { foreach() { } } }", "while() { foreach() { } } ")]
     public void Parse_ShouldNotTerminateCSharp_WhenBracesAreNested(string input, string expected)
     {
         // Arrange.
@@ -23,6 +23,50 @@ public sealed class CSharpTests
     }
 
     [Fact]
+    public void Parse_ShouldNotTerminateCSharp_WhenLeftChevronIsEncounteredInExpression()
+    {
+        // Arrange.
+        var input = "@{ for (var i = 0; i < 5; i++) { } }";
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is CodeBlockToken);
+        var code = (CodeBlockToken)tokens.First();
+
+        // Assert.
+        code.Children.Should().HaveCount(1);
+    }
+
+    [Theory]
+    [InlineData("@{ public sealed class Generic<T> { } }")]
+    [InlineData("@{ public Func<string> Getter { get; set; } }")]
+    [InlineData("@{ public record Parent<T> { Func<string> Getter { get; set; } } }")]
+    public void Parse_ShouldNotTerminateCSharp_WhenLeftChevronIsEncounteredInGeneric(string input)
+    {
+        // Arrange.
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is CodeBlockToken);
+        var code = (CodeBlockToken)tokens.First();
+
+        // Assert.
+        code.Children.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Parse_ShouldNotTerminateCSharp_WhenLeftChevronIsEncounteredInStatement()
+    {
+        // Arrange.
+        var input = "@{ var isLess = 5 < 3; }";
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is CodeBlockToken);
+        var code = (CodeBlockToken)tokens.First();
+
+        // Assert.
+        code.Children.Should().HaveCount(1);
+    }
+
+    [Fact]
     public void Parse_ShouldNotTerminateCSharp_WhenSemicolonIsInString()
     {
         // Arrange.
@@ -35,7 +79,7 @@ public sealed class CSharpTests
         // Arrange.
         code.Children.Should().HaveCount(1);
         code.Children.First().Should().BeOfType<CSharpToken>();
-        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be(" var x = \";\"; ");
+        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be("var x = \";\"; ");
     }
 
     [Fact]
@@ -51,7 +95,7 @@ public sealed class CSharpTests
         // Arrange.
         code.Children.Should().HaveCount(1);
         code.Children.First().Should().BeOfType<CSharpToken>();
-        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be(" var x = 1; ");
+        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be("var x = 1; ");
     }
 
     [Fact]
@@ -67,6 +111,6 @@ public sealed class CSharpTests
         // Arrange.
         code.Children.Should().HaveCount(1);
         code.Children.First().Should().BeOfType<CSharpToken>();
-        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be(" var x = \"{\"; ");
+        ((CSharpToken)code.Children.First()).Code(input).ToString().Should().Be("var x = \"{\"; ");
     }
 }

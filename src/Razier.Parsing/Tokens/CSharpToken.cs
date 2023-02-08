@@ -1,6 +1,6 @@
 namespace Razier.Parsing.Tokens;
 
-public record struct CSharpToken : IToken
+public readonly record struct CSharpToken : IToken
 {
     public int Length { get; init; }
     public int Offset { get; init; }

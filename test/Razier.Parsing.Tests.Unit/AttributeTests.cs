@@ -20,6 +20,36 @@ public sealed class AttributeTests
     }
 
     [Fact]
+    public void Parse_ShouldNotTerminateAttributeName_WhenSemicolonIsPresent()
+    {
+        // Arrange.
+        var input = "<div @bind:event='oninput'></div>";
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is ElementToken);
+        var element = (ElementToken)tokens.First();
+
+        // Assert.
+        element.Attributes.Should().HaveCount(1);
+        element.Attributes.First().Key(input).ToString().Should().Be("@bind:event");
+        element.Attributes.First().Value(input).ToString().Should().Be("oninput");
+    }
+
+    [Fact]
+    public void Parse_ShouldNotTerminateAttributeValue_WhenInExplicitRazorExpression()
+    {
+        // Arrange.
+        var input = "<div class=\"@(true ? \"\" : \"\")\"></div>";
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is ElementToken);
+        var element = (ElementToken)tokens.First();
+
+        // Assert.
+        element.Attributes.Should().HaveCount(1);
+    }
+
+    [Fact]
     public void Parse_ShouldReturnAllAttributes_WhenMultipleArePresent()
     {
         // Arrange;
@@ -37,11 +67,29 @@ public sealed class AttributeTests
         element.Attributes.Last().Value(input).ToString().Should().Be("btn");
     }
 
+    [Theory]
+    [InlineData("<button class=@myClass></button>")]
+    [InlineData("<button class=@myClass\n/>")]
+    [InlineData("<button class=@myClass/>")]
+    public void Parse_ShouldReturnAttribute_WhenNoQuotesArePresent(string input)
+    {
+        // Arrange;
+
+        // Act.
+        var tokens = Parser.Parse(input).Where(x => x is ElementToken);
+        var element = (ElementToken)tokens.First();
+
+        // Assert.
+        element.Attributes.Should().HaveCount(1);
+        element.Attributes.First().Key(input).ToString().Should().Be("class");
+        element.Attributes.First().Value(input).ToString().Should().Be("@myClass");
+    }
+
     [Fact]
     public void Parse_ShouldReturnAttribute_WhenNoValueIsPresent()
     {
         // Arrange;
-        var input = "<button disabled />";
+        var input = "<button disabled/>";
 
         // Act.
         var tokens = Parser.Parse(input).Where(x => x is ElementToken);

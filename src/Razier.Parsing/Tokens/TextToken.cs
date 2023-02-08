@@ -1,6 +1,6 @@
 namespace Razier.Parsing.Tokens;
 
-public readonly record struct ImplicitRazorExpressionToken : IToken
+public readonly record struct TextToken : IToken
 {
     public int Length { get; init; }
     public int Offset { get; init; }

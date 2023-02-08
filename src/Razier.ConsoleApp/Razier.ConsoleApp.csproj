@@ -3,11 +3,12 @@
   <ItemGroup>
     <ProjectReference Include="..\Razier.Lexing\Razier.Lexing.csproj" />
     <ProjectReference Include="..\Razier.Parsing\Razier.Parsing.csproj" />
-    <ProjectReference Include="..\Razier.Formatter\Razier.Formatter.csproj" />
+    <ProjectReference Include="..\Razier.Formatting\Razier.Formatting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Crayon" Version="2.0.69" />
+    <PackageReference Include="CSharpier.Core" Version="0.22.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
