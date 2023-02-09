@@ -102,4 +102,19 @@ public sealed class ElementTests
         // Assert.
         formatted.Should().Be(expected);
     }
+
+    [Fact]
+    public void Format_ShouldNotDuplicateNewLine_WhenInsideCodeBlockAndAfterCSharpWithNewLine()
+    {
+        // Arrange.
+        var input = "@foreach (value) { var x = 1;\r\n<div></div> }";
+
+        // Act.
+        var formatted = Formatter.Format(input, "\t");
+
+        // Assert.
+        formatted
+            .Should()
+            .Be("@foreach (value)\r\n{\r\n    var x = 1;\r\n\r\n    <div></div>\r\n}\r\n");
+    }
 }

@@ -5,6 +5,19 @@ namespace Razier.Parsing.Tests.Unit;
 
 public sealed class TextTests
 {
+    [Fact]
+    public void Parse_ShouldNotThrow_WhenTextExtendsToEndOfFile()
+    {
+        // Arrange.
+        var input = "Text extends to end of file";
+
+        // Act.
+        var parse = () => Parser.Parse(input);
+
+        // Assert.
+        parse.Should().NotThrow();
+    }
+
     [Theory]
     [InlineData("<div>Content @value here</div>", 2)]
     [InlineData("<div>Content @value goes @value here</div>", 3)]

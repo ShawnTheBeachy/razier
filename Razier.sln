@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatting.Tests.Uni
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatting", "src\Razier.Formatting\Razier.Formatting.csproj", "{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Razier.Formatting.Benchmarks", "benchmark\Razier.Formatting.Benchmarks\Razier.Formatting.Benchmarks.csproj", "{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,10 @@ Global
 		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -118,5 +124,6 @@ Global
 		{1BEA439D-A1E4-441E-AB83-B91C50B1A304} = {43E0EC53-88A7-4626-A72E-026C384944EF}
 		{F28BEF53-16F2-4334-8EFD-F7AD1BD094B1} = {190DB6AC-9EA1-45C6-9028-9875D962B4AA}
 		{5E6E298F-27CA-435D-826B-0E0CE2D3E54A} = {DB13EFBB-9493-44FD-8D64-81902747B5AF}
+		{6D7EE8FD-5344-433A-A7B2-65FF79D82B6F} = {43E0EC53-88A7-4626-A72E-026C384944EF}
 	EndGlobalSection
 EndGlobal

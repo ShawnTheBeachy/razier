@@ -9,8 +9,13 @@ public static partial class Formatter
 {
     public static string Format(string source, string tab = "  ")
     {
-        var output = new StringBuilder();
         var tokens = Parser.Parse(source);
+        return Format(tokens, source, tab);
+    }
+
+    public static string Format(IList<IToken> tokens, string source, string tab = "  ")
+    {
+        var output = new StringBuilder();
         var newLineCount = 0;
 
         foreach (var token in tokens)
@@ -19,10 +24,10 @@ public static partial class Formatter
 
             if (!isNewLine)
             {
-                for (var i = 0; i < Math.Min(1, newLineCount); i++)
+                for (var i = 0; i < Math.Min(2, newLineCount); i++)
                     output.AppendLine();
 
-                FormatToken(token, source, output, 0, tab);
+                FormatToken(token, source, output, "", tab);
                 newLineCount = 0;
             }
             else
@@ -40,26 +45,20 @@ public static partial class Formatter
     private static void AppendIndented(
         this StringBuilder output,
         ReadOnlySpan<char> value,
-        int indentLevel,
-        string tab
+        ReadOnlySpan<char> indent
     )
     {
-        for (var i = 0; i < indentLevel; i++)
-            output.Append(tab);
-
+        output.Append(indent);
         output.Append(value);
     }
 
     private static void AppendIndented(
         this StringBuilder output,
         char value,
-        int indentLevel,
-        string tab
+        ReadOnlySpan<char> indent
     )
     {
-        for (var i = 0; i < indentLevel; i++)
-            output.Append(tab);
-
+        output.Append(indent);
         output.Append(value);
     }
 
@@ -67,20 +66,11 @@ public static partial class Formatter
         AttributeToken attribute,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent
     )
     {
         var key = attribute.Key(source);
-
-        if (indentLevel > 0)
-        {
-            output.AppendLine();
-            output.AppendIndented($"{prefix}{key}", indentLevel, tab);
-        }
-        else
-            output.Append(key);
+        output.AppendIndented(key, indent);
 
         if (attribute.ValueLength > 0)
         {
@@ -94,40 +84,37 @@ public static partial class Formatter
         CodeBlockToken codeBlock,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
-        if (output.Length > 0)
-            output.AppendLine();
-
         var open = codeBlock.Open(source).Trim();
 
         if (MemoryExtensions.Equals("@{", open[..2], StringComparison.Ordinal))
-            output.AppendIndented($"{prefix}@{{", indentLevel, tab);
+            output.AppendIndented("@{", indent);
         else
         {
-            output.AppendIndented($"{prefix}{open[..^1].Trim()}", indentLevel, tab);
+            output.AppendIndented(open[..^1].Trim(), indent);
             output.AppendLine();
-            output.AppendIndented($"{prefix}{{", indentLevel, tab);
+            output.AppendIndented("{", indent);
         }
 
         output.AppendLine();
-        FormatCodeBlockContent(codeBlock, source, output, indentLevel, tab, prefix);
+        FormatCodeBlockContent(codeBlock, source, output, indent, tab);
         output.AppendLine();
-        output.AppendIndented($"{prefix}{codeBlock.Close(source)}", indentLevel, tab);
+        output.AppendIndented(codeBlock.Close(source), indent);
     }
 
     private static void FormatCodeBlockContent(
         CodeBlockToken codeBlock,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
+        const string htmlMarker = $"//{nameof(ElementToken)}-";
+
         var code = new StringBuilder();
         code.Append("namespace A;");
         code.AppendLine();
@@ -140,47 +127,79 @@ public static partial class Formatter
             else if (child is ElementToken element)
             {
                 code.AppendLine();
-                code.AppendLine($"//{nameof(ElementToken)}-{elements.Count}");
+                code.AppendLine($"{htmlMarker}{elements.Count}");
                 elements[elements.Count.ToString()] = element;
             }
         }
 
         var formatted = CSharpier.CodeFormatter.Format(
             code.ToString(),
-            new CSharpier.CodeFormatterOptions { Width = 80 - (4 * indentLevel) }
-        )[12..].Trim('\r', '\n');
+            new CSharpier.CodeFormatterOptions { Width = 80 - indent.Length }
+        )[12..]
+            .AsSpan()
+            .Trim('\r', '\n');
+        bool? wasLastLineHtml = null;
+        char? lastChar = null;
+        var consecutiveNewLines = 0;
 
-        var lines = formatted.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var lastLineWasCSharp = false;
-
-        for (var i = 0; i < lines.Length; i++)
+        for (var i = 0; i < formatted.Length; i++)
         {
-            var line = lines[i];
-
-            if (line.Contains($"//{nameof(ElementToken)}-"))
+            if (
+                formatted[i] == '/'
+                && formatted.Length - i >= htmlMarker.Length
+                && MemoryExtensions.Equals(
+                    htmlMarker,
+                    formatted[i..(i + htmlMarker.Length)],
+                    StringComparison.Ordinal
+                )
+            )
             {
-                if (lastLineWasCSharp)
+                i += htmlMarker.Length;
+                var markerStart = i;
+
+                while (i < formatted.Length && char.IsNumber(formatted[i]))
+                    i++;
+
+                var markerKey = formatted[markerStart..i].ToString();
+                i--;
+                var element = elements[markerKey];
+
+                if (wasLastLineHtml.HasValue && !wasLastLineHtml.Value && consecutiveNewLines < 2)
                     output.AppendLine();
 
-                FormatElement(
-                    elements[line.Split('-')[1]],
-                    source,
-                    output,
-                    indentLevel,
-                    tab,
-                    !lastLineWasCSharp,
-                    $"{prefix}    "
-                );
-                lastLineWasCSharp = false;
+                FormatElement(element, source, output, indent + "    ", tab);
+                wasLastLineHtml = true;
             }
-            else
+            else if (
+                i == 0
+                || (
+                    formatted[i] != '\r'
+                    && formatted[i] != '\n'
+                    && (lastChar == '\r' || lastChar == '\n')
+                )
+            )
             {
-                if (i > 0)
-                    output.AppendLine();
-
-                output.AppendIndented($"{prefix}    {line}", indentLevel, tab);
-                lastLineWasCSharp = true;
+                output.AppendIndented(ReadOnlySpan<char>.Empty, indent);
+                output.Append("    ");
+                output.Append(formatted[i]);
             }
+            else if (formatted[i] != '\r' && formatted[i] != '\n')
+            {
+                output.Append(formatted[i]);
+                wasLastLineHtml = false;
+            }
+            else if (consecutiveNewLines < 2)
+                output.Append(formatted[i]);
+
+            consecutiveNewLines = formatted[i] switch
+            {
+                '\n' => consecutiveNewLines + 1,
+                '\r' when formatted[i + 1] != '\n' => 1,
+                '\r' => consecutiveNewLines,
+                _ => 0
+            };
+
+            lastChar = formatted[i];
         }
     }
 
@@ -188,14 +207,11 @@ public static partial class Formatter
         CommentToken comment,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
-        var open = comment.Open(source);
-        output.AppendLine();
-        output.AppendIndented($"{prefix}{open}", indentLevel, tab);
+        output.AppendIndented(comment.Open(source), indent);
 
         var content = comment.Content(source).ToString().Trim(' ', '\t', '\r', '\n');
         var hasMultipleLines = content.Contains('\n') || content.Contains('\r');
@@ -217,7 +233,7 @@ public static partial class Formatter
                 if (content[i] != '\n' && content[i] != '\r')
                 {
                     if (lastCharWasNewLine)
-                        output.AppendIndented($"{prefix}{content[i]}", indentLevel + 1, tab);
+                        output.AppendIndented(content[i], indent + tab);
                     else
                         output.Append(content[i]);
 
@@ -233,44 +249,64 @@ public static partial class Formatter
             }
 
             output.AppendLine();
-            output.AppendIndented($"{prefix}{comment.Close(source)}", indentLevel, tab);
+            output.AppendIndented(comment.Close(source), indent);
         }
     }
 
-    private static void FormatControlStructureToken(
+    private static void FormatControlStructure(
         ControlStructureToken control,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
-        if (output.Length > 0)
-        {
-            if (indentLevel == 0)
-                output.AppendLine();
-
-            output.AppendLine();
-        }
-
         var open = control.Open(source).Trim();
-        output.AppendIndented($"{prefix}{open}", indentLevel, tab);
+        output.AppendIndented(open, indent);
+
+        if (open[0] == '@')
+            open = open[1..];
+
         var expression = control.Expression(source).Trim();
+
+        var formattable = "namespace A;void A(){";
+        var (formattableOpen, isFollowing) = open.Trim() switch
+        {
+            "else" or "@else" => ("if (true){} else", true),
+            "else if" or "@else if" => ("if (true){} else if", true),
+            "catch" or "@catch" => ("try {} catch", true),
+            "finally" or "@finally" => ("try {} finally", true),
+            _ => (open.ToString(), false)
+        };
+        formattable += $"{formattableOpen}{expression}{{}}}}";
+        var formatted = CSharpier.CodeFormatter.Format(formattable);
+        var offset = formatted.IndexOf(open.ToString());
+
+        if (isFollowing)
+            for (var i = offset; formatted[i] != '}'; i--)
+                if (formatted[i] == '\n')
+                    output.AppendLine();
+
+        expression = formatted[
+            (offset + open.Length)..^(formatted.Length - formatted.LastIndexOf('{') + 1)
+        ].Trim();
+
         var isDoWhile = MemoryExtensions.Equals("@do", open, StringComparison.Ordinal);
 
         if (!isDoWhile)
-        {
-            output.Append(' ');
-            output.Append(expression);
-        }
+            output.AppendIndented(expression, " ");
 
-        output.AppendLine();
-        output.AppendIndented($"{prefix}{{", indentLevel, tab);
-        output.AppendLine();
-        FormatCodeBlockContent(control, source, output, indentLevel, tab, prefix);
-        output.AppendLine();
-        output.AppendIndented($"{prefix}}}", indentLevel, tab);
+        if (control.Children.Count > 0)
+        {
+            output.AppendLine();
+            output.AppendIndented('{', indent);
+            output.AppendLine();
+            FormatCodeBlockContent(control, source, output, indent, tab);
+            output.AppendLine();
+            output.AppendIndented('}', indent);
+        }
+        else
+            output.Append(" { }");
 
         if (isDoWhile)
         {
@@ -283,27 +319,22 @@ public static partial class Formatter
         ElementToken token,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        bool sameLine = false,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
-        if (output.Length > 0 && !sameLine)
-            output.AppendLine();
-
-        output.AppendIndented($"{prefix}<", indentLevel, tab);
+        output.AppendIndented('<', indent);
         var tokenName = token.Name(source);
         output.Append(tokenName);
 
         if (token.Attributes.Count == 1)
-        {
-            output.Append(' ');
-            FormatAttribute(token.Attributes.First(), source, output, 0, tab);
-        }
+            FormatAttribute(token.Attributes.First(), source, output, " ");
         else
             foreach (var attribute in token.Attributes)
-                FormatAttribute(attribute, source, output, indentLevel + 1, tab, prefix);
+            {
+                output.AppendLine();
+                FormatAttribute(attribute, source, output, indent + tab);
+            }
 
         output.Append('>');
 
@@ -324,7 +355,7 @@ public static partial class Formatter
             };
 
         if (childLength is not null && childLength < 10)
-            FormatToken(children[0], source, output, 0, tab);
+            FormatToken(children[0], source, output, "", "");
         else
             foreach (var child in children)
             {
@@ -334,12 +365,12 @@ public static partial class Formatter
                     || child is ExplicitRazorExpressionToken;
 
                 if (isText && lastChildWasText)
-                {
-                    output.Append(' ');
-                    FormatToken(child, source, output, 0, tab);
-                }
+                    FormatToken(child, source, output, " ", "");
                 else
-                    FormatToken(child, source, output, indentLevel + 1, tab, prefix);
+                {
+                    output.AppendLine();
+                    FormatToken(child, source, output, indent + tab, tab);
+                }
 
                 lastChildWasText = isText;
             }
@@ -354,7 +385,7 @@ public static partial class Formatter
         )
         {
             output.AppendLine();
-            output.AppendIndented($"{prefix}</", indentLevel, tab);
+            output.AppendIndented("</", indent);
         }
         else
             output.Append("</");
@@ -367,85 +398,73 @@ public static partial class Formatter
         ExplicitRazorExpressionToken razor,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent
     )
     {
-        var value = $"{prefix}{razor.Open(source)}{razor.Code(source).Trim()}{razor.Close(source)}";
-
-        if (indentLevel > 0)
-        {
-            output.AppendLine();
-            output.AppendIndented(value, indentLevel, tab);
-        }
-        else
-            output.Append(value);
+        output.AppendIndented(razor.Open(source), indent);
+        output.Append(razor.Code(source).Trim());
+        output.Append(razor.Close(source));
     }
 
     private static void FormatImplicitRazorExpression(
         ImplicitRazorExpressionToken razor,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent
     )
     {
-        var value = $"{prefix}{razor.Value(source).Trim()}";
+        output.AppendIndented(razor.Value(source).Trim(), indent);
+    }
 
-        if (indentLevel > 0)
-        {
-            output.AppendLine();
-            output.AppendIndented(value, indentLevel, tab);
-        }
-        else
-            output.Append(value);
+    private static void FormatLineLevelDirective(
+        LineLevelDirectiveToken directive,
+        ReadOnlySpan<char> source,
+        StringBuilder output
+    )
+    {
+        output.Append(directive.Directive(source));
+        output.Append(' ');
+        var line = directive.Line(source).Trim();
+        output.Append(line);
+
+        if (line[^1] != ';')
+            output.Append(';');
     }
 
     private static void FormatText(
         TextToken text,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent
     )
     {
-        var value = text.Value(source).Trim();
-
-        if (indentLevel > 0)
-        {
-            output.AppendLine();
-            output.AppendIndented($"{prefix}{value}", indentLevel, tab);
-        }
-        else
-            output.Append(value);
+        output.AppendIndented(text.Value(source).Trim(), indent);
     }
 
     private static void FormatToken(
         IToken token,
         ReadOnlySpan<char> source,
         StringBuilder output,
-        int indentLevel,
-        string tab,
-        string prefix = ""
+        string indent,
+        string tab
     )
     {
         if (token is ElementToken element)
-            FormatElement(element, source, output, indentLevel, tab, false, prefix);
+            FormatElement(element, source, output, indent, tab);
         else if (token is CommentToken comment)
-            FormatComment(comment, source, output, indentLevel, tab, prefix);
+            FormatComment(comment, source, output, indent, tab);
         else if (token is ExplicitRazorExpressionToken explicitRazor)
-            FormatExplicitRazorExpression(explicitRazor, source, output, indentLevel, tab, prefix);
+            FormatExplicitRazorExpression(explicitRazor, source, output, indent);
         else if (token is ImplicitRazorExpressionToken implicitRazor)
-            FormatImplicitRazorExpression(implicitRazor, source, output, indentLevel, tab, prefix);
+            FormatImplicitRazorExpression(implicitRazor, source, output, indent);
         else if (token is TextToken text)
-            FormatText(text, source, output, indentLevel, tab, prefix);
+            FormatText(text, source, output, indent);
         else if (token is ControlStructureToken control)
-            FormatControlStructureToken(control, source, output, indentLevel, tab, prefix);
+            FormatControlStructure(control, source, output, indent, tab);
         else if (token is CodeBlockToken codeBlock)
-            FormatCodeBlock(codeBlock, source, output, indentLevel, tab, prefix);
+            FormatCodeBlock(codeBlock, source, output, indent, tab);
+        else if (token is LineLevelDirectiveToken directive)
+            FormatLineLevelDirective(directive, source, output);
         else if (token is NewLineToken)
             output.AppendLine();
     }
@@ -468,6 +487,9 @@ public static partial class Formatter
         for (; endIndex <= span.Length; endIndex++)
             if (!chars.Contains(span[^endIndex]))
                 break;
+
+        if (startIndex == span.Length)
+            return ReadOnlySpan<char>.Empty;
 
         return span[startIndex..(span.Length - endIndex + 1)];
     }

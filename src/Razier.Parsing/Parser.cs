@@ -476,7 +476,7 @@ public static partial class Parser
     }
 
     private static NewLineToken ConsumeNewLine(Lexeme[] lexemes, ref int index) =>
-        new NewLineToken { Offset = lexemes[index++].Offset };
+        new() { Offset = lexemes[index++].Offset };
 
     private static CommentToken ConsumeRazorComment(Lexeme[] lexemes, ref int index)
     {
@@ -509,8 +509,11 @@ public static partial class Parser
         {
             index++;
         } while (
-            (tokenType = GetTokenType(lexemes, index, source)) == TokenType.Text
-            || tokenType == TokenType.Ignore
+            lexemes[index].Type != LexemeType.EndOfFile
+            && (
+                (tokenType = GetTokenType(lexemes, index, source)) == TokenType.Text
+                || tokenType == TokenType.Ignore
+            )
         );
 
         return token with
@@ -536,7 +539,11 @@ public static partial class Parser
             TokenType.HtmlComment => ConsumeHtmlComment(lexemes, ref index),
             TokenType.RazorComment => ConsumeRazorComment(lexemes, ref index),
             TokenType.Text => ConsumeText(lexemes, ref index, source),
-            TokenType.NewLine or TokenType.CarriageReturn => ConsumeNewLine(lexemes, ref index),
+            TokenType.NewLine => ConsumeNewLine(lexemes, ref index),
+            TokenType.CarriageReturn
+                when index == lexemes.Length - 1
+                    || GetTokenType(lexemes, index + 1, source) != TokenType.NewLine
+                => ConsumeNewLine(lexemes, ref index),
             _ => new IgnoreToken()
         };
 
@@ -768,26 +775,4 @@ public static partial class Parser
             "wbr",
             "!DOCTYPE"
         };
-}
-
-// Sub-types.
-public static partial class Parser
-{
-    private enum TokenType
-    {
-        Attribute,
-        CodeBlock,
-        ControlStructure,
-        CSharpToken,
-        Element,
-        ExplicitRazorExpression,
-        HtmlComment,
-        Ignore,
-        ImplicitRazorExpression,
-        LineLevelDirective,
-        RazorComment,
-        Text,
-        CarriageReturn,
-        NewLine
-    }
 }

@@ -14,6 +14,12 @@ public sealed partial class Formatter
         _tokens = parser.Parse().ToArray();
     }
 
+    public Formatter(IParsedToken[] tokens, string indentation = "    ")
+    {
+        _indentation = indentation;
+        _tokens = tokens;
+    }
+
     public string Format()
     {
         _output.Clear();

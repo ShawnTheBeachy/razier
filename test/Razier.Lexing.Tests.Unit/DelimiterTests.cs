@@ -85,9 +85,11 @@ public sealed partial class DelimiterTests
                             LexemeType.CarriageReturn => "\r",
                             LexemeType.Tab => "\t",
                             LexemeType.Semicolon => ";",
-                            _ => throw new NotImplementedException()
+                            LexemeType.Equals => "=",
+                            _ => ""
                         },
                         x
                     }
-            );
+            )
+            .Where(x => x[0] is string s && s != "");
 }
